@@ -147,17 +147,54 @@ service status sshd</pre>
   </section>
 
   <section>
-    <h2>What is not declarative yet</h2>
-    <p>Honestly: <code>system.conf</code> currently covers packages and
-    services, and that is genuinely all it covers. Hostname, locale,
-    timezone, user accounts and network configuration are set once at
-    install time from <code>install.conf</code> and are not reconciled by
-    <code>arctic-rebuild</code> — changing any of those on a running system
-    means editing it directly (<code>hostname</code>, editing
-    <code>/etc/locale.conf</code>, <code>usermod</code>, and so on), the
-    same as on a non-declarative distribution. That gap is known, is the
-    obvious next thing to close, and is called out here rather than implied
-    to already work.</p>
+    <h2>System identity, users, and the nonfree flag</h2>
+    <p><code>system.conf</code> covers more than packages and services.
+    Hostname, timezone, locale and keymap are reconciled the same way
+    packages are — change the value, rebuild, it takes effect:</p>
+    <pre class="code">SYS_HOSTNAME="labbox"
+SYS_TZ="America/New_York"
+SYS_LOCALE="en_GB.UTF-8"
+SYS_KEYMAP="us"</pre>
+    <p>User accounts are declared too, one per line as
+    <code>name:shell:groups</code>, but deliberately not symmetrically
+    reconciled the way packages are: a declared user that does not exist
+    yet is created on the next rebuild, but an account that already exists
+    and is simply not listed is left alone rather than deleted.
+    Automatically removing a user's account and home directory because a
+    line was missing from a text file is a different order of consequence
+    than removing a package, and this tool does not take that action
+    without being asked more directly than an absent line — delete an
+    account yourself with <code>userdel</code> if that is really what you
+    want.</p>
+    <pre class="code">SYS_USERS="
+	ray:/bin/zsh:wheel,users,audio,video
+"</pre>
+    <p><code>SYS_ALLOW_NONFREE</code> gates the nonfree and alt-nonfree
+    repositories the same way <code>allowUnfree</code> gates nixpkgs —
+    <code>no</code> disables them (without uninstalling anything already
+    pulled from them), <code>yes</code> enables them for future installs.</p>
+    <p>And after every successful rebuild,
+    <code>/etc/arctic/system.lock</code> is written automatically: every
+    explicitly installed package pinned to the exact version and release
+    that is actually on the machine, the same reason a
+    <code>flake.lock</code> sits next to a <code>flake.nix</code>. It is a
+    record of what was actually applied, not something you edit — and,
+    honestly, not yet something a rebuild reads back to pin against
+    repository drift either. It exists today as an accurate record;
+    enforcing it is a reasonable next step, not yet done.</p>
+  </section>
+
+  <section>
+    <h2>What is still not declarative</h2>
+    <p>Network configuration — which mode, wifi credentials, static
+    addressing — is still set once at install time from
+    <code>install.conf</code> and is not reconciled by
+    <code>arctic-rebuild</code>. Changing it on a running system means
+    editing the relevant files directly. There is also no concept of
+    "outputs" the way a Nix flake exposes reusable modules and packages for
+    other configurations to import: <code>system.conf</code> describes one
+    machine, not a library other machines pull from. Both are known gaps,
+    named here rather than implied to already work.</p>
   </section>
 
   <section>
