@@ -22,79 +22,141 @@
 
   <section>
     <h2>What you need</h2>
-    <p>A Linux host with a C toolchain, <code>cmake</code>,
+    <p>A Linux host with a working C toolchain, <code>cmake</code>,
     <code>ninja</code>, <code>xorriso</code>, <code>mksquashfs</code>,
-    <code>bubblewrap</code>, and about 30 GiB free.</p>
+    <code>bubblewrap</code>, and roughly 30 GiB of free disk space for a
+    full build.</p>
     <pre class="code">git clone https://github.com/apiwo/arctic-linux
 git clone https://github.com/apiwo/arctic-linux-ports
 cd arctic-linux
 ln -s ../arctic-linux-ports ports</pre>
-    <p>The ports tree lives in its own repository, so the main one stays the
-    system rather than the system plus five hundred recipes.</p>
+    <p>The ports tree lives in its own repository rather than inside the
+    main one, so the main repository stays "the system" and not "the system
+    plus several hundred recipes" — cloning it separately and symlinking it
+    in is the expected setup, not a workaround.</p>
   </section>
 
   <section>
     <h2>Building</h2>
-    <pre class="code">./build.sh                 everything
-./build.sh rootfs iso      only these steps</pre>
-    <p>Steps, in order: <code>fetch</code>, <code>kernel</code>,
-    <code>rootfs</code>, <code>usable</code>, <code>pkgs</code>,
-    <code>iso</code>. Each is idempotent — anything already built is skipped,
-    so a failed run can be fixed and re-run without starting over.</p>
+    <pre class="code">./build.sh                 the whole pipeline, start to finish
+./build.sh rootfs iso      only run these specific steps</pre>
+    <p>Steps, always in this order: <code>fetch</code>, <code>kernel</code>,
+    <code>rootfs</code>, <code>usable</code> (the disk and wireless tooling
+    layered on top of the base rootfs), <code>pkgs</code> (turn everything
+    built into <code>.alpmz</code> and index the repositories),
+    <code>iso</code> (master the bootable image). Every step checks whether
+    its own output already exists before doing the work again, so a build
+    that failed partway through can simply be re-run after fixing the
+    problem, without needing to start the whole pipeline over from
+    <code>fetch</code>.</p>
+    <p>To build one extra package directly into the repository, without
+    running the whole pipeline:</p>
     <pre class="code">build/arctic-sandbox build/build-batch.sh vim nano</pre>
   </section>
 
   <section>
     <h2>Everything builds in a sandbox</h2>
-    <p>Not a convention — a rule the filesystem enforces. Every build runs
-    under bubblewrap with the entire host bound read-only; only the build
-    tree, the source tree and <code>/tmp</code> are writable.</p>
+    <p>Not a convention documented somewhere and hoped for — a rule the
+    filesystem itself enforces. Every build step runs under bubblewrap, with
+    the entire host filesystem bound read-only; only the build tree, the
+    source tree and <code>/tmp</code> are ever writable from inside it.</p>
     <pre class="code">build/arctic-sandbox --check</pre>
-    <p>This exists because it went wrong once. Arctic's glibc is configured
-    with <code>slibdir=/usr/lib</code>, so a recipe that forgets
-    <code>DESTDIR</code> writes that glibc straight into the host's
-    <code>/usr/lib</code> and every dynamically linked program on the machine
-    stops working. A note in a README was not good enough; the filesystem has
-    to refuse.</p>
-    <p>For musl packages use <code>arctic-musl-sandbox</code> instead — same
-    guarantee, plus a working musl toolchain. See
-    <a href="/musl.html">musl</a>.</p>
+    <p>This exists because it went wrong once, badly. Arctic's glibc is
+    configured with <code>slibdir=/usr/lib</code> for a merged-<code>/usr</code>
+    layout, which means a recipe that forgets to pass <code>DESTDIR</code>
+    during its own install step writes that glibc directly into the
+    <em>host's</em> real <code>/usr/lib</code> — and every dynamically
+    linked program on that host, including the shell you are typing in,
+    stops working immediately. A note in a README saying "always use
+    DESTDIR" was not sufficient the first time this happened; the
+    filesystem itself now refuses the write instead of trusting every
+    recipe to remember.</p>
+    <p>musl packages go through <code>arctic-musl-sandbox</code> instead of
+    the plain one — same read-only-host guarantee, plus a working musl
+    toolchain staged inside it. See <a href="/musl.html">musl</a> for the
+    details of how that injection is done without weakening the guarantee.</p>
   </section>
 
   <section>
-    <h2>Testing</h2>
-    <pre class="code">build/arctic-qemu live        boot the ISO
-build/arctic-qemu live-uefi   through OVMF
-build/arctic-qemu install     with a blank disk attached
-build/arctic-qemu boot        boot what you installed
-build/arctic-qemu wipe        start over</pre>
+    <h2>Testing what you built</h2>
+    <pre class="code">build/arctic-qemu live        boot the ISO in QEMU
+build/arctic-qemu live-uefi   boot it through OVMF instead of BIOS/SeaBIOS
+build/arctic-qemu install     boot the ISO with a blank virtual disk attached
+build/arctic-qemu boot        boot whatever was installed onto that disk
+build/arctic-qemu wipe        delete the test disk and start over</pre>
+    <p>Boot-testing is not optional for anything touching the boot path,
+    the installer, or service startup — several of the real bugs described
+    in <a href="/troubleshooting.html">troubleshooting</a> produced no error
+    at all in the build log and were only found by actually booting the
+    result and looking at what happened.</p>
   </section>
 
   <section>
     <h2>The toolchain</h2>
-    <p>glibc cannot be compiled by clang — upstream requires GCC — so the
-    host's GCC is used as a stage-0 tool for glibc alone. Nothing it produces
-    beyond glibc is packaged.</p>
-    <p>One thing worth knowing if you write recipes: <code>alpm-build</code>
-    exports <code>pkgdir</code> but deliberately not <code>srcdir</code>.
-    <code>srcdir</code> is autoconf's own variable name, and exporting it put
-    a path autoconf never chose into every configure script — which broke any
-    package whose configure re-execs a nested one, silently and with no error
-    at all.</p>
+    <p>glibc specifically cannot be compiled with clang — upstream glibc
+    requires GCC — so <code>build-rootfs.sh</code> uses the host's own GCC
+    as a stage-0 tool for glibc alone, once, and nothing else it might
+    produce along the way is packaged or relied on further.</p>
+    <p>One detail worth knowing if you write or modify recipes:
+    <code>alpm-build</code> exports <code>pkgdir</code> to every recipe but
+    deliberately does not export <code>srcdir</code>. <code>srcdir</code> is
+    autoconf's own reserved variable name for where a package's sources
+    live, and exporting Arctic's own differently-meaning <code>srcdir</code>
+    put a path autoconf never chose into the environment of every configure
+    script a recipe runs — which silently broke any package whose top-level
+    <code>configure</code> re-execs a nested one (vim's does exactly this:
+    the top-level script is a two-line stub that runs
+    <code>src/configure</code>), with no error message anywhere, just an
+    empty <code>./configure --help</code> output and a build that failed
+    much later for a reason that looked unrelated.</p>
+  </section>
+
+  <section>
+    <h2>Merged-<code>/usr</code>, and a mistake worth knowing about</h2>
+    <p><code>/bin</code>, <code>/sbin</code>, <code>/lib</code> and
+    <code>/lib64</code> are all symlinks into <code>/usr</code>, and
+    <code>/usr/sbin</code> is itself a symlink to <code>/usr/bin</code> — a
+    fully merged layout, not the traditional split. Setting that final
+    symlink up correctly is less trivial than it looks:
+    <code>ln -sfn bin /usr/sbin</code> run against a path that is already a
+    real directory (which it will be, since packages install into
+    <code>/usr/sbin</code> directly during the rootfs build) does not
+    replace that directory with the intended symlink at all — it creates
+    <code>/usr/sbin/bin -> bin</code> <em>inside</em> the existing
+    directory instead, a symlink that points at itself, while
+    <code>/usr/sbin</code> itself stays an ordinary unmerged directory the
+    whole time. This shipped in a real image before it was caught: anything
+    installed under <code>/usr/sbin</code> after that point (dhcpcd, among
+    others) was reachable, but the tree was not actually merged the way
+    every other piece of tooling assumed it was.</p>
+    <p>The fix moves anything already present in <code>/usr/sbin</code>
+    into <code>/usr/bin</code> first, then replaces the now-empty directory
+    with the symlink — and the same care is needed anywhere a package is
+    unpacked onto the live tree afterward: a plain <code>tar -xf</code>
+    of a package containing files under <code>usr/sbin/</code> will, by
+    default, replace an existing directory-symlink target with a real
+    directory again on extraction, silently un-merging <code>/usr</code> a
+    second time. <code>mkiso</code>'s package-install step passes
+    <code>--keep-directory-symlink</code> to <code>tar</code> specifically
+    to prevent this.</p>
   </section>
 
   <section>
     <h2>Contributing</h2>
-    <p>Pull requests are welcome and are read before merging. Package changes
-    go through <code>ports/manifest.tsv</code> in
+    <p>Pull requests are welcome and are read personally before merging.
+    Package changes go through <code>ports/manifest.tsv</code> in
     <a href="https://github.com/apiwo/arctic-linux-ports">arctic-linux-ports</a>,
-    not the main repository — recipes are generated from the manifest.</p>
-    <p>There is no logo yet. If you want to make one:
-    <code>CONTRIBUTING.md</code> says what is wanted.</p>
+    not the main repository — edit the manifest, since recipes are generated
+    from it and a hand-edited generated recipe will simply be overwritten on
+    the next regeneration unless it also gets a <code>recipe.local</code>
+    marker.</p>
+    <p>There is no logo yet. If you want to try making one,
+    <code>CONTRIBUTING.md</code> in the main repository says exactly what is
+    wanted.</p>
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a></p>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 
   <footer>

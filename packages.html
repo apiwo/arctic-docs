@@ -22,91 +22,121 @@
 
   <section>
     <h2>alpm</h2>
-    <p>Arctic's package manager. Binary packages are
-    <code>.alpmz</code> files — a tar.xz with a <code>.PKGINFO</code>, a
-    <code>.FILES</code> list and the payload rooted at <code>/</code>.</p>
+    <p>Arctic's package manager, written specifically for this
+    distribution. Binary packages are <code>.alpmz</code> files — a plain
+    tar.xz archive containing a <code>.PKGINFO</code> metadata block, a
+    <code>.FILES</code> manifest, and the actual payload rooted at
+    <code>/</code>, so installing one is close to literally unpacking a
+    tarball with bookkeeping on top.</p>
     <pre class="code">alpm ins vim              install
 alpm del vim              remove
-alpm del+deps vim         remove, and anything only it needed
-alpm search editor        search
-alpm info vim             what a package is
-alpm list                 what is installed
-alpm files vim            what a package owns
-alpm owns /usr/bin/vim    which package owns a file
-alpm fetch all            refresh the repository indexes
-alpm upgrade              upgrade everything</pre>
+alpm del+deps vim         remove, and anything only it needed as a dependency
+alpm search editor        search names and descriptions
+alpm info vim             what a package is, its version, its dependencies
+alpm list                 everything currently installed
+alpm files vim            every file a package owns
+alpm owns /usr/bin/vim    which installed package owns a given file
+alpm fetch all            refresh the repository indexes over the network
+alpm upgrade              upgrade everything installed to the latest available</pre>
     <p>On a configured system, prefer editing
-    <code>system.conf</code> and rebuilding — see
-    <a href="/configure.html">declarative configuration</a>. Using
-    <code>alpm ins</code> directly works, but the next rebuild will remove
-    anything the file does not mention.</p>
+    <code>system.conf</code> and running <code>arctic-rebuild</code> over
+    calling <code>alpm ins</code> directly — see
+    <a href="/configure.html">declarative configuration</a> for why. Using
+    alpm directly still works exactly as shown above; the difference is only
+    that the next rebuild will remove anything installed this way that the
+    file does not also mention.</p>
   </section>
 
   <section>
     <h2>Building from source</h2>
-    <p>Not everything has a binary. When it does not, alpm offers to build
-    it:</p>
-    <pre class="code">alpm ins -s some-package    build from the port, even if a binary exists
-alpm build recipe          build a recipe into an .alpmz</pre>
-    <p>On musl this is the normal path — see <a href="/musl.html">musl</a>.</p>
+    <p>Not every package has a binary built for it. When one does not, alpm
+    offers to build it on the spot rather than simply failing:</p>
+    <pre class="code">alpm ins -s some-package    build from the port, even when a binary also exists
+alpm build recipe           build a specific recipe file into an .alpmz directly</pre>
+    <p>On musl this is the normal, expected path rather than a fallback —
+    see <a href="/musl.html">musl</a> for why binaries are always glibc and
+    what that means for musl installs specifically.</p>
   </section>
 
   <section>
     <h2>Repositories</h2>
     <table>
-      <tr><td><code>main</code></td><td>the base system and its libraries</td></tr>
-      <tr><td><code>base</code></td><td>desktops, X, Wayland, larger stacks</td></tr>
-      <tr><td><code>extra</code></td><td>applications and tools</td></tr>
-      <tr><td><code>kernels</code></td><td>kernels and headers</td></tr>
-      <tr><td><code>profile</code></td><td>whole-environment meta packages</td></tr>
-      <tr><td><code>musl</code></td><td>packages built against musl</td></tr>
-      <tr><td><code>source</code></td><td>recipes for everything, binary or not</td></tr>
-      <tr><td><code>nonfree</code>, <code>multilib</code></td><td>off by default</td></tr>
+      <tr><td><code>main</code></td><td>the base system and the libraries it needs</td></tr>
+      <tr><td><code>base</code></td><td>desktops, X11, Wayland, and other larger stacks</td></tr>
+      <tr><td><code>extra</code></td><td>applications and general-purpose tools</td></tr>
+      <tr><td><code>kernels</code></td><td>kernels, kernel headers, firmware</td></tr>
+      <tr><td><code>profile</code></td><td>whole-environment meta packages — a desktop, an audio stack, in one name</td></tr>
+      <tr><td><code>musl</code></td><td>the subset of packages built against musl instead of glibc</td></tr>
+      <tr><td><code>nonfree</code>, <code>alt-nonfree</code>, <code>multilib</code></td><td>off by default; opt in explicitly</td></tr>
     </table>
-    <p>Configured in <code>/etc/alpm/repos.d/*.repo</code>:</p>
+    <p><code>musl</code> is a binary-repository concept specifically, worth
+    contrasting with the ports side: the same recipe in the ports tree
+    produces either a glibc or a musl package depending on which sandbox
+    builds it (<code>arctic-sandbox</code> versus
+    <code>arctic-musl-sandbox</code>), so ports themselves have no separate
+    "musl" or "source" category — a port is source, full stop, and which
+    libc it links against is a build-time decision, not a property of the
+    recipe's location in the tree.</p>
+    <p>Configured per repository in <code>/etc/alpm/repos.d/*.repo</code>:</p>
     <pre class="code">name = main
 url = https://pkg-arctic.apiwow.net/ALL/main
 enabled = yes
 priority = 10</pre>
-    <p>Browse them at
+    <p>Browse the actual contents at
     <a href="https://pkg-arctic.apiwow.net">pkg-arctic.apiwow.net</a> and
-    <a href="https://ports-arctic.apiwow.net">ports-arctic.apiwow.net</a>.</p>
+    the ports/recipes at
+    <a href="https://ports-arctic.apiwow.net">ports-arctic.apiwow.net</a>.
+    Packages and firmware larger than 25 MiB are served from GitHub Releases
+    instead of the package host directly, since that is the free-tier file
+    size limit on the hosting used — the listing marks those entries
+    clearly rather than presenting a broken-looking local link.</p>
   </section>
 
   <section>
-    <h2>Snapshots and rollback</h2>
-    <p>On btrfs, alpm snapshots before every install or removal:</p>
-    <pre class="code">alpm log                  every transaction
-alpm rollback             undo the last one
-arctic snapshots          list them</pre>
-    <p>This is separate from generations, which record declared
-    configurations rather than filesystem state — see
-    <a href="/generations.html">generations</a>.</p>
+    <h2>Snapshots and rollback (package level)</h2>
+    <p>On btrfs, alpm snapshots the filesystem before every install or
+    removal:</p>
+    <pre class="code">alpm log                  every transaction, in order
+alpm rollback              undo the most recent one
+arctic snapshots           list them via the arctic umbrella command</pre>
+    <p>This is a separate mechanism from generations, which record declared
+    configuration rather than raw filesystem state — see
+    <a href="/generations.html">generations</a> for when you would reach for
+    one over the other.</p>
   </section>
 
   <section>
     <h2>Ports</h2>
-    <p>Every package is generated from one line in
+    <p>Every package in the repositories is generated from a single line in
     <code>ports/manifest.tsv</code>:</p>
     <pre class="code">repo  name  version  buildsys  license  depends  makedepends  url  source  desc</pre>
-    <p><code>gen-ports.py</code> turns that into a recipe. A package needing
-    something the template cannot express gets a hand-written recipe plus a
-    <code>recipe.local</code> marker beside it, which stops regeneration from
-    overwriting the hand work.</p>
-    <p>Changes go to
-    <a href="https://github.com/apiwo/arctic-linux-ports">arctic-linux-ports</a>.</p>
+    <p><code>gen-ports.py</code> turns each row into a recipe using a
+    template matched to the declared build system (autotools, cmake, meson,
+    make, cargo, and so on). A package that needs something the template
+    genuinely cannot express gets a hand-written recipe instead, with a
+    <code>recipe.local</code> marker file placed beside it — that marker is
+    what stops the next manifest-driven regeneration from silently
+    overwriting the hand work, which happened more than once before the
+    marker convention existed and is why it exists now.</p>
+    <p>Package and recipe changes go to
+    <a href="https://github.com/apiwo/arctic-linux-ports">arctic-linux-ports</a>,
+    not the main <code>arctic-linux</code> repository — edit the manifest
+    there, not a generated recipe directly, unless it is one of the
+    hand-written exceptions.</p>
   </section>
 
   <section>
     <h2>pkgit</h2>
     <p>pkgit can be installed alongside alpm:</p>
     <pre class="code">A_PKGIT=yes</pre>
-    <p>alpm remains what the system itself is built and managed with; this
-    only puts pkgit next to it.</p>
+    <p>alpm remains what the system itself is built, packaged and managed
+    with — the declarative layer, the ports build pipeline, and the ISO
+    itself all assume alpm specifically. This setting only adds pkgit next
+    to it as an additional tool, not a replacement.</p>
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 
   <footer>

@@ -25,23 +25,26 @@
     <p>Set it at install time:</p>
     <pre class="code">A_INIT=busybox</pre>
     <table>
-      <tr><td><code>busybox</code></td><td>the default. busybox init, <code>/etc/rc.boot</code>, <code>/etc/rc.d</code> scripts. Nothing extra installed.</td></tr>
+      <tr><td><code>busybox</code></td><td>the default. busybox init, <code>/etc/rc.boot</code>, <code>/etc/rc.d</code> scripts. Nothing extra installed — this is what Arctic is built around.</td></tr>
       <tr><td><code>openrc</code></td><td>dependency-based, from Gentoo. <code>/etc/init.d</code>, <code>rc-update</code>.</td></tr>
-      <tr><td><code>sysvinit</code></td><td>the traditional one. <code>/etc/inittab</code>, <code>/etc/rc3.d</code>.</td></tr>
-      <tr><td><code>runit</code></td><td>tiny supervision. <code>/etc/sv</code>, <code>sv up</code>.</td></tr>
-      <tr><td><code>dinit</code></td><td>dependency handling without the size. <code>dinitctl</code>.</td></tr>
-      <tr><td><code>s6-66</code></td><td>s6 and s6-rc supervision with the 66 frontend.</td></tr>
-      <tr><td><code>systemd</code></td><td>units, journald, the suite.</td></tr>
-      <tr><td><code>systemd-libre</code></td><td>systemd with the nonfree firmware loading paths removed.</td></tr>
+      <tr><td><code>sysvinit</code></td><td>the traditional System V init. <code>/etc/inittab</code>, <code>/etc/rc3.d</code>.</td></tr>
+      <tr><td><code>runit</code></td><td>small, direct process supervision. <code>/etc/sv</code>, <code>sv up</code>/<code>sv down</code>.</td></tr>
+      <tr><td><code>dinit</code></td><td>dependency handling in a small footprint. <code>dinitctl</code>.</td></tr>
+      <tr><td><code>s6-66</code></td><td>s6 and s6-rc supervision with the 66 frontend. Incomplete — see below.</td></tr>
+      <tr><td><code>systemd</code></td><td>units, journald, the full suite. Not packaged yet.</td></tr>
+      <tr><td><code>systemd-libre</code></td><td>systemd with the nonfree firmware loading paths removed. Not packaged yet either.</td></tr>
     </table>
-    <p>Anything other than busybox is installed along with its supervision
-    tools, and gets <code>init=</code> on the kernel command line.</p>
+    <p>Choosing anything other than busybox installs that init and its
+    supervision tools, then translates every service Arctic enables into
+    that init's own format. If the packages a choice needs are not actually
+    available, the installer says so plainly and falls back to busybox init
+    rather than quietly producing a machine that cannot boot at all.</p>
   </section>
 
   <section>
     <h2>Services are declared once</h2>
-    <p>Arctic defines a service in <code>/etc/rc.d</code> as a few
-    variables:</p>
+    <p>Arctic defines a service in <code>/etc/rc.d</code> as a handful of
+    shell variables:</p>
     <pre class="code">#!/bin/sh
 NAME=iwd
 CMD=/usr/bin/iwd
@@ -50,66 +53,104 @@ BACKGROUND=yes
 
 . /etc/arctic/svc.lib
 svc_main "$@"</pre>
-    <p>That is the only definition. <code>arctic-init-setup</code> translates
-    it into whatever the running init expects — an OpenRC
-    <code>init.d</code> script, a runit <code>run</code> file, a dinit
-    service file, an s6 service directory, a systemd unit.</p>
-    <p>Shipping one definition and generating the rest means adding a service
-    to Arctic is one file, and no init quietly drifts out of step with the
-    others.</p>
-    <pre class="code">arctic-init-setup openrc              regenerate for OpenRC
-arctic-init-setup runit --root /mnt   or into a target</pre>
-    <p>A rebuild that changes the enabled set regenerates them automatically
-    for whichever init the machine runs.</p>
+    <p>That is the single, authoritative definition. It gets read (not run)
+    by <code>arctic-init-setup</code>, which extracts <code>NAME</code>,
+    <code>CMD</code>, <code>ARGS</code> and <code>BACKGROUND</code> without
+    executing the script, and generates the equivalent definition for
+    whichever init is actually running — an OpenRC <code>init.d</code>
+    script, a runit <code>run</code> file, a dinit service file, an s6
+    service directory, a systemd unit.</p>
+    <p>Shipping one definition and generating the rest, instead of hand
+    maintaining eight parallel copies of every service, means adding a
+    service to Arctic stays a one-file change, and no init can silently
+    drift out of step with what the others do.</p>
+    <pre class="code">arctic-init-setup openrc              regenerate service definitions for OpenRC
+arctic-init-setup runit --root /mnt   or write them into a target root, e.g. from the installer</pre>
+    <p>A rebuild that changes the enabled service set automatically
+    regenerates the definitions for whichever init the machine is actually
+    running — this is not something you have to remember to do by hand
+    after every rebuild.</p>
   </section>
 
   <section>
-    <h2>What translation actually does</h2>
-    <p>Daemons and one-shots are different, and the translation knows the
-    difference. A service with a <code>CMD</code> becomes a supervised
-    process; one without — <code>network</code>, <code>nftables</code>,
-    <code>fstrim</code> — becomes a one-shot that calls the
-    <code>rc.d</code> script's own start and stop.</p>
-    <p>That distinction matters per init. Under runit a one-shot cannot be a
-    supervised service at all — it would exit immediately and be restarted
-    forever — so those go into runit's stage-1 boot script instead. Under
-    dinit they become <code>type = scripted</code>; under systemd,
-    <code>Type=oneshot</code> with <code>RemainAfterExit</code>.</p>
-    <p>Daemons that would fork are told to stay in the foreground when the
-    init supervises them: <code>dbus-daemon --nofork</code>,
-    <code>sshd -D</code>, <code>crond -f</code>.</p>
+    <h2>Daemons versus one-shots</h2>
+    <p>Not every service in <code>/etc/rc.d</code> is a long-running daemon
+    with a <code>CMD</code>. <code>network</code>, <code>nftables</code>,
+    <code>fstrim</code> and <code>pipewire</code>'s bring-up define
+    <code>start()</code>/<code>stop()</code> logic directly in the script
+    instead, with no single process to supervise. The translation has to
+    know the difference, and getting this wrong is exactly the kind of bug
+    that leaves a machine silently missing something important: an earlier
+    version of every generator here skipped services with no
+    <code>CMD</code> entirely, which meant a non-busybox install would boot
+    with no networking configured and no firewall enabled, with nothing in
+    the output suggesting anything was wrong.</p>
+    <p>A service with a <code>CMD</code> becomes a properly supervised
+    process under the target init. One without becomes a one-shot that calls
+    the <code>rc.d</code> script's own start and stop directly — under runit
+    specifically, that means living in the stage-1 boot script rather than
+    under <code>/etc/sv</code>, since runit's supervision model has no
+    concept of "run once and exit successfully" the way dinit's
+    <code>scripted</code> type or systemd's <code>Type=oneshot</code> do.</p>
+    <p>Daemons that would normally fork into the background are told to stay
+    in the foreground when a real init is supervising them instead:
+    <code>dbus-daemon --system --nofork --nopidfile</code>,
+    <code>sshd -D</code>, <code>crond -f</code>, <code>syslogd -n</code>.
+    Under busybox's own init none of this applies — the scripts run through
+    <code>svc.lib</code>'s own start-stop-daemon-based backgrounding
+    instead, which is a different code path with different assumptions.</p>
   </section>
 
   <section>
     <h2>Where things land</h2>
     <table>
-      <tr><td>busybox</td><td><code>/etc/rc.d</code>, enabled via <code>/etc/arctic/services</code></td></tr>
+      <tr><td>busybox</td><td><code>/etc/rc.d</code>, enabled via marker files under <code>/etc/arctic/services</code></td></tr>
       <tr><td>openrc</td><td><code>/etc/init.d</code>, <code>/etc/runlevels/default</code></td></tr>
-      <tr><td>sysvinit</td><td><code>/etc/init.d</code>, <code>/etc/rc3.d</code>, <code>/etc/rc5.d</code></td></tr>
-      <tr><td>runit</td><td><code>/etc/sv</code>, <code>/etc/runit/runsvdir/default</code>, stages in <code>/etc/runit/1</code>–<code>3</code></td></tr>
-      <tr><td>dinit</td><td><code>/etc/dinit.d</code>, <code>/etc/dinit.d/boot.d</code></td></tr>
-      <tr><td>s6-66</td><td><code>/etc/s6/sv</code>, <code>/etc/66/service</code></td></tr>
+      <tr><td>sysvinit</td><td><code>/etc/init.d</code>, symlinked into <code>/etc/rc3.d</code> and <code>/etc/rc5.d</code></td></tr>
+      <tr><td>runit</td><td><code>/etc/sv</code>, <code>/etc/runit/runsvdir/default</code>, one-shots in <code>/etc/runit/1</code>–<code>3</code></td></tr>
+      <tr><td>dinit</td><td><code>/etc/dinit.d</code>, enabled ones linked into <code>/etc/dinit.d/boot.d</code></td></tr>
+      <tr><td>s6-66</td><td><code>/etc/s6/sv</code> service directories, <code>/etc/66/service</code> frontends</td></tr>
       <tr><td>systemd</td><td><code>/etc/systemd/system</code></td></tr>
     </table>
-    <p>s6 needs its database compiled on the target once installed:</p>
+    <p>s6 needs its service database compiled explicitly once installed,
+    which is not something the translation step can do for you ahead of
+    time since it depends on the exact set of enabled services on the
+    target:</p>
     <pre class="code">s6-rc-compile /etc/s6/rc/compiled /etc/s6/sv</pre>
   </section>
 
   <section>
     <h2>Honest status</h2>
-    <p>busybox init is what Arctic is built around, is what every service
-    script is written against, and is the only one that has been through a
-    full install-and-boot on real hardware. The others generate correct
-    definitions and install their packages, but they have had far less use.
-    If you are installing Arctic for the first time, use the default.</p>
-    <p>systemd in particular is a large dependency chain that Arctic does not
-    yet build in full. If the package is unavailable the installer says so
-    and falls back to busybox init rather than producing a machine that
-    cannot boot.</p>
+    <p>busybox init is what Arctic is actually built around, is what every
+    service script in the tree is written and tested against directly, and
+    is the only one that has been through a full install-and-boot cycle on
+    real hardware as opposed to a virtual machine. <code>openrc</code>,
+    <code>sysvinit</code>, <code>runit</code> and <code>dinit</code> all
+    build correctly, package cleanly, and generate correct service
+    definitions when tested through the translation logic directly — but
+    they have had far less real-world use than busybox init has. If you are
+    installing Arctic for the first time, use the default; if you are
+    curious about one of the alternatives, treat it as something worth
+    testing carefully rather than assuming parity with busybox's own path.</p>
+    <p><code>s6-66</code> is genuinely incomplete right now: <code>s6</code>
+    itself, <code>skalibs</code> and <code>execline</code> build and package
+    fine, but <code>s6-rc</code> and <code>s6-linux-init</code> do not — the
+    skarnet build's dependency chain resolves library prerequisites through
+    make's own <code>-l</code> prerequisite mechanism against
+    <code>.LIBPATTERNS</code>, and getting a staged (not installed
+    system-wide) dependency visible to that mechanism has not been solved
+    yet. Choosing <code>A_INIT=s6-66</code> today gets you the fallback to
+    busybox init and an honest message explaining why, not a partially
+    working system.</p>
+    <p>systemd and systemd-libre are not packaged at all yet — the
+    dependency chain (udev, a full elogind or logind stack, and so on) is
+    large, and building it correctly has not happened. The config lists both
+    as options because the intent is real, but selecting either currently
+    falls back the same way s6-66 does.</p>
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 
   <footer>

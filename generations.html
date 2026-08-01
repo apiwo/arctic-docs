@@ -22,12 +22,16 @@
 
   <section>
     <h2>What a generation is</h2>
-    <p>A complete record of what the system was declared to be at one moment:
-    <code>system.conf</code>, the explicit package set with exact versions,
-    the enabled services, and which kernel was in use.</p>
+    <p>A complete, self-contained record of what the system was declared to
+    be at one moment: <code>system.conf</code> itself, the explicit package
+    set with the exact version and release of every one of them, the
+    enabled services, and which kernel was in use at the time.</p>
     <p>Every <code>arctic-rebuild</code> writes one before it changes
-    anything, and another once it has succeeded. The install itself is
-    generation 1.</p>
+    anything, and another once it has actually succeeded — so a rebuild that
+    fails partway through still leaves behind a clean "before" record to
+    fall back to. The install itself is generation 1, written by
+    <code>arctic-strap</code> at the end of the install, before you have
+    ever run a rebuild by hand.</p>
     <pre class="code">arctic generations
 
 GEN   DATE                 PACKAGES SERVICES  DESCRIPTION
@@ -42,73 +46,111 @@ GEN   DATE                 PACKAGES SERVICES  DESCRIPTION
 
   <section>
     <h2>Rolling back</h2>
-    <pre class="code">arctic rollback            go back one
-arctic rollback 3          go back to generation 3
+    <pre class="code">arctic rollback            go back one generation
+arctic rollback 3          go back to generation 3 specifically
 arctic diff 3 5            what changed between them
-arctic-generation show 3   everything generation 3 contained</pre>
+arctic-generation show 3   everything generation 3 recorded</pre>
     <p>Rolling back restores that generation's <code>system.conf</code> and
-    reconciles the machine to it — the same operation a rebuild performs, so
-    packages come back at the versions that generation recorded and services
-    return to the state it listed.</p>
-    <p>Switching is itself recorded as a generation, so rolling back is also
-    undoable. You cannot get stuck.</p>
+    then reconciles the running machine to it — the exact same reconciling
+    operation an ordinary rebuild performs, just against an older file
+    instead of the current one. Packages come back at the versions that
+    generation recorded, and services return to the set it listed.</p>
+    <p>Switching to a generation is itself recorded as a new generation
+    before it happens, so a rollback is also undoable — there is no
+    dead-end state where you have rolled back to the wrong thing and now
+    have no way forward. <code>arctic rollback</code> with no argument goes
+    back exactly one generation from wherever the machine currently is,
+    which covers the common case (undo the change you just made) without
+    needing to look up a number first.</p>
   </section>
 
   <section>
     <h2>From the boot menu</h2>
     <p>A configuration that will not boot cannot be fixed from a shell you
-    cannot reach. So the recent generations are in the boot menu:</p>
+    cannot reach, so the recent generations are listed directly in the
+    bootloader:</p>
     <pre class="code">Arctic Linux
 Arctic Linux (verbose)
 Arctic Linux (recovery shell)
 Arctic Linux (generation 4)
 Arctic Linux (generation 3)
 Arctic Linux (generation 2)</pre>
-    <p>Choosing one boots with <code>arctic.generation=N</code> on the kernel
-    command line. <code>/etc/rc.boot</code> sees it and reconciles the system
-    to that generation before services start, so the entry means the same
-    thing as having run <code>arctic-generation switch N</code> beforehand —
-    not just a different label on the same system.</p>
-    <p>If the switch fails, the machine still finishes booting and says so.
-    An escape hatch that can itself strand you is not an escape hatch.</p>
-    <p>How many appear is <code>A_GENERATIONS</code> in
-    <code>install.conf</code>, default 5. <code>0</code> turns them off.</p>
+    <p>Choosing one of the generation entries boots with
+    <code>arctic.generation=N</code> appended to the kernel command line.
+    <code>/etc/rc.boot</code> checks for that argument very early, before
+    any service starts, and reconciles the system to that generation if it
+    is not already the current one — so booting that entry means the same
+    thing as having run <code>arctic-generation switch N</code> before
+    powering on, not just a differently labelled boot of the same broken
+    system.</p>
+    <p>If the switch itself fails for some reason, the machine still
+    finishes booting normally and reports the failure — an escape hatch that
+    can itself get stuck is not an escape hatch, so this path is written to
+    never abort the boot, only to log what went wrong and continue.</p>
+    <p>How many generations appear is controlled by
+    <code>A_GENERATIONS</code> in <code>install.conf</code>, default 5.
+    Setting it to <code>0</code> turns the boot menu entries off entirely,
+    though generations themselves keep being recorded either way — this
+    setting only controls the bootloader listing, not whether history is
+    kept.</p>
   </section>
 
   <section>
     <h2>Housekeeping</h2>
     <pre class="code">arctic-generation list
-arctic-generation prune 10     keep the newest 10
+arctic-generation prune 10     keep only the newest 10
 arctic-generation delete 4
-arctic-generation current</pre>
-    <p>The current generation is never deleted, by prune or otherwise.
-    <code>arctic gc</code> prunes generations along with the package cache
-    and orphaned dependencies.</p>
+arctic-generation current      print the current generation's id</pre>
+    <p>The current generation is never deleted, whether by an explicit
+    <code>delete</code> or by <code>prune</code> trimming old ones — there
+    is always at least the one the machine is actually running.
+    <code>arctic gc</code> prunes generations as part of its wider cleanup,
+    alongside the package cache, orphaned dependencies and unused
+    <code>arctic-shell</code> environments.</p>
   </section>
 
   <section>
     <h2>Generations are not snapshots</h2>
-    <p>Both are worth having and they are different things.</p>
+    <p>Both exist, both are worth having, and they solve genuinely different
+    problems.</p>
     <table>
       <tr><td><strong>Generation</strong></td>
           <td>what the system was <em>declared</em> to be. Rolling back
-          re-reconciles the machine to that declaration. Works on any
-          filesystem, survives a reinstall, and is small — a few text
-          files.</td></tr>
+          re-reconciles the machine to that declaration by reinstalling and
+          removing packages as needed. Works on any filesystem, survives a
+          full reinstall since it is just text, and is small — a handful of
+          plain files per generation.</td></tr>
       <tr><td><strong>Snapshot</strong></td>
-          <td>the filesystem as it literally was, restored file for file.
-          Needs btrfs. Undoes things no package ever declared — a config file
-          you edited by hand, something a build wrote into
-          <code>/usr</code>.</td></tr>
+          <td>the filesystem exactly as it literally was, restored file for
+          file, byte for byte. Needs btrfs. Undoes things no package ever
+          declared and a generation therefore has no record of — a config
+          file you edited by hand outside of any package, something a build
+          you ran directly wrote into <code>/usr</code>.</td></tr>
     </table>
     <pre class="code">arctic generations     declared configurations
-arctic snapshots       btrfs snapshots</pre>
-    <p>alpm takes a snapshot before every install or removal when the root is
-    btrfs, independently of generations.</p>
+arctic snapshots       btrfs filesystem snapshots</pre>
+    <p>alpm itself takes a snapshot before every install or removal whenever
+    the root filesystem is btrfs, entirely independently of whether
+    generations are in use — the two systems do not know about each other
+    and do not need to.</p>
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
+    <h2>Why this exists</h2>
+    <p>Before generations existed, an <code>arctic-rebuild</code> that
+    removed something important, or a bad edit to <code>system.conf</code>,
+    had no clean way back short of a btrfs snapshot (if you had one and were
+    on btrfs) or reinstalling. That is a real gap for anything calling
+    itself declarative — NixOS's whole reputation rests on exactly this
+    property, and a declarative system without a rollback path is really
+    just an imperative system with extra bookkeeping. Generations close that
+    gap directly: every reconciliation is bracketed by a recorded state on
+    both sides, and the boot menu makes the worst case (an unbootable
+    rebuild) recoverable without external media.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 
   <footer>

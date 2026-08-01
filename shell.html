@@ -22,40 +22,57 @@
 
   <section>
     <h2>Throwaway environments</h2>
-    <p>A shell with packages in it that do not touch the real system:</p>
+    <p>A shell with packages available inside it that never touch the real
+    system:</p>
     <pre class="code">arctic-shell python rust
 arctic-shell --keep ffmpeg
 arctic-shell --network node</pre>
-    <p>The environment is built in its own root, entered with
-    <code>chroot</code>, and removed when you exit. Nothing is installed on
-    the machine itself. This is Arctic's equivalent of
-    <code>nix-shell</code>.</p>
+    <p>The environment is built in its own scratch root, entered with
+    <code>chroot</code>, and torn down again when you exit — unless
+    <code>--keep</code> was given. Nothing installed inside it is installed
+    on the host machine itself. This is Arctic's rough equivalent of
+    <code>nix-shell</code>: a way to have a toolchain available for one task
+    without it becoming a permanent part of the system's declared package
+    set.</p>
   </section>
 
   <section>
     <h2>Options</h2>
     <table>
-      <tr><td><code>--keep</code></td><td>do not remove it on exit; reuse it next time</td></tr>
-      <tr><td><code>--network</code></td><td>leave networking available inside</td></tr>
-      <tr><td><code>-- cmd</code></td><td>run a command instead of an interactive shell</td></tr>
+      <tr><td><code>--keep</code></td><td>do not remove the environment on exit; reuse it the next time the same command is run</td></tr>
+      <tr><td><code>--network</code></td><td>leave networking reachable inside the chroot, off by default</td></tr>
+      <tr><td><code>-- cmd</code></td><td>run one command inside instead of dropping into an interactive shell</td></tr>
     </table>
-    <p><code>--keep</code> is sticky: once an environment is kept, a later
-    invocation without the flag will not silently delete it.</p>
+    <p><code>--keep</code> is sticky in one specific direction: once an
+    environment has been marked kept, a later invocation of the same
+    environment <em>without</em> the flag does not silently un-mark it and
+    delete it out from under you. Only an explicit <code>--keep</code> ever
+    sets the marker; nothing un-sets it by omission. This was a real bug
+    once — every invocation without the flag would quietly clear a
+    previously kept environment's marker, so the very next cleanup pass
+    would remove it — and the fix was specifically to make the marker
+    write-only-on-request rather than reset-by-default.</p>
   </section>
 
   <section>
     <h2>Cleaning up</h2>
     <pre class="code">arctic gc</pre>
-    <p>Prunes the package cache, orphaned dependencies, old generations and
-    unused shell environments older than a week that were not kept.</p>
-    <p>Cleanup verifies every bind mount is actually unmounted, via
-    <code>/proc/mounts</code>, before removing anything. If it cannot
-    confirm that, it leaves the environment in place and says so — deleting a
-    tree with live mounts under it is not a mistake worth making twice.</p>
+    <p>Prunes the package cache, orphaned dependencies, old generations
+    beyond the configured keep count, and unused <code>arctic-shell</code>
+    environments older than a week that were never marked kept.</p>
+    <p>Cleanup verifies, via <code>/proc/mounts</code>, that every bind
+    mount belonging to an environment is genuinely unmounted before removing
+    anything on disk. If that cannot be confirmed, the environment is left
+    in place with a warning rather than removed anyway — recursively
+    deleting a directory tree that still has something live mounted under
+    it is exactly the kind of mistake that is not worth making twice, and
+    this check exists specifically because of a real incident where an
+    unsandboxed operation wrote into a mounted path it should not have been
+    able to reach.</p>
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 
   <footer>

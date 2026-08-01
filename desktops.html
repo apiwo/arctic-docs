@@ -24,71 +24,88 @@
     <h2>Desktops</h2>
     <pre class="code">A_DESKTOP=xfce</pre>
     <table>
-      <tr><td><code>none</code></td><td>console only, the default</td></tr>
+      <tr><td><code>none</code></td><td>console only — the default, and what a bare install still gives you</td></tr>
       <tr><td><code>xfce</code></td><td>XFCE 4.22 with LightDM</td></tr>
       <tr><td><code>kde</code></td><td>KDE Plasma 6 with SDDM</td></tr>
-      <tr><td><code>niri</code></td><td>Niri, scrollable-tiling Wayland</td></tr>
-      <tr><td><code>dwm</code></td><td>dwm, suckless and tiny</td></tr>
+      <tr><td><code>niri</code></td><td>Niri, a scrollable-tiling Wayland compositor</td></tr>
+      <tr><td><code>dwm</code></td><td>dwm, suckless and intentionally tiny</td></tr>
     </table>
-    <p>Each is a profile package that pulls the whole environment — session,
-    applications, display manager, fonts and audio — so a desktop is one
-    choice rather than a list of parts to keep in step by hand.</p>
+    <p>Each option is a single profile meta-package that pulls in the whole
+    working environment at once — session, applications, display manager,
+    fonts and audio — rather than leaving you to assemble the pieces and
+    keep them in sync by hand. Choosing a desktop is one line in the config,
+    not a shopping list.</p>
     <table>
-      <tr><td><code>arctic-xfce</code></td><td>XFCE, foot, Thunar, notifyd, screenshooter, LightDM, X, PipeWire, fonts, Arctic theme</td></tr>
+      <tr><td><code>arctic-xfce</code></td><td>XFCE, foot, Thunar, notifyd, screenshooter, LightDM, X11, PipeWire, fonts, the Arctic theme</td></tr>
       <tr><td><code>arctic-kde</code></td><td>Plasma, foot, Dolphin, Kate, Ark, Spectacle, Gwenview, Okular, SDDM with the Arctic theme, PipeWire, fonts</td></tr>
       <tr><td><code>niri-dms</code></td><td>Niri, DankMaterialShell, foot, fuzzel, mako, swaylock, grim, slurp, XWayland, PipeWire, fonts, Firefox</td></tr>
-      <tr><td><code>apiwow-dwm</code></td><td>dwm, dmenu, st, picom, slstatus, slock, X, fonts</td></tr>
+      <tr><td><code>apiwow-dwm</code></td><td>dwm, dmenu, st, picom, slstatus, slock, X11, fonts</td></tr>
     </table>
   </section>
 
   <section>
     <h2>Display managers</h2>
     <pre class="code">A_DM=lightdm     # or sddm, greetd, none</pre>
-    <p>Left unset, the desktop picks its own — LightDM for XFCE, SDDM for
-    KDE. <code>none</code> means logging in on the console and starting the
-    session yourself.</p>
+    <p>Left unset, the chosen desktop's own default is used — LightDM for
+    XFCE, SDDM for KDE. Setting it explicitly overrides that, which is how
+    you get, say, greetd with XFCE instead of LightDM. <code>none</code>
+    means logging in on a text console and starting the session by hand,
+    which is the normal path for a tiling window manager you intend to
+    launch from <code>.xinitrc</code> yourself rather than through a
+    graphical login screen.</p>
   </section>
 
   <section>
     <h2>Audio</h2>
     <pre class="code">A_AUDIO=yes</pre>
-    <p>Installs <code>arctic-sound</code>: PipeWire, WirePlumber, the
-    PulseAudio shim so anything expecting Pulse still plays, ALSA, and
-    <code>alsamixer</code> for setting levels directly. The service is
-    enabled at boot.</p>
-    <p>It can also be asked for as a package, which is the same thing:</p>
+    <p>Installs <code>arctic-sound</code>: PipeWire and WirePlumber as the
+    actual audio and session management layer, the PipeWire PulseAudio
+    compatibility shim so anything expecting a real PulseAudio server still
+    works unmodified, ALSA itself, and <code>alsamixer</code> for the times
+    you need to adjust levels or routing directly rather than through a
+    desktop's own mixer applet. The service is enabled at boot as part of
+    turning this on.</p>
+    <p>It is also just an ordinary package, which is the same thing stated
+    differently:</p>
     <pre class="code">SYS_PACKAGES="
 	arctic-sound
 "</pre>
-    <p>Desktop profiles already include the audio stack, so
-    <code>A_AUDIO</code> matters mainly on a console-only system or
-    alongside a window manager you assembled yourself.</p>
+    <p>Every desktop profile above already includes the full audio stack on
+    its own, so <code>A_AUDIO</code> mainly matters for a console-only
+    system, or one running a window manager you assembled by hand rather
+    than through a profile.</p>
   </section>
 
   <section>
     <h2>Bluetooth</h2>
     <pre class="code">A_BLUETOOTH=yes</pre>
-    <p>bluez and the PipeWire bluetooth backend, with
-    <code>bluetoothd</code> enabled. Needs dbus, which is always on.</p>
+    <p>Installs bluez and the PipeWire Bluetooth backend, with
+    <code>bluetoothd</code> enabled. Needs dbus, which is on by default on
+    every install regardless of this setting.</p>
   </section>
 
   <section>
     <h2>Graphics</h2>
     <pre class="code">A_GPU=auto     # or nvidia, nouveau, amd, intel, generic</pre>
-    <p><code>auto</code> reads the PCI bus and installs what is actually
-    there.</p>
+    <p><code>auto</code> reads the PCI bus directly and installs whatever
+    driver actually matches the hardware present, rather than installing
+    every driver defensively or guessing from a hardware database.</p>
   </section>
 
   <section>
     <h2>Fonts</h2>
     <pre class="code">A_FONTS="jetbrains-mono nerd-fonts-symbols noto noto-emoji"</pre>
-    <p>JetBrains Mono and the Nerd Font symbol set are on the ISO already, so
-    icons in a terminal work from the installer onward. The console gets
-    Arctic's palette at boot regardless of what is installed.</p>
+    <p>JetBrains Mono and the Nerd Font symbol set are already on the live
+    ISO itself, not only available as an install-time option, so icons in a
+    terminal render correctly from the installer onward rather than only
+    after the first boot of the installed system. The live console gets
+    Arctic's own colour palette applied at boot regardless of which fonts
+    end up installed — that palette change is unconditional and unrelated
+    to this setting.</p>
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 
   <footer>

@@ -24,13 +24,18 @@
     <h2>The idea</h2>
     <p>A file describes the machine. A command makes the machine match the
     file. That is the whole model, and it is the same one NixOS uses —
-    built on top of an ordinary package manager rather than replacing it.</p>
+    built here on top of an ordinary package manager rather than replacing
+    it with a new one.</p>
     <pre class="code">/etc/arctic/system.conf     what the machine is
-arctic-rebuild              make it so</pre>
+arctic-rebuild               make it so</pre>
     <p>You do not <code>alpm ins</code> things onto a configured Arctic
-    system. You add a line and rebuild. The difference matters: the file
-    stays a complete, accurate description of the machine, which is what
-    makes rebuilding it elsewhere — or rolling it back — possible at all.</p>
+    system as the normal way of working. You add a line to the file and
+    rebuild. The difference is not stylistic: the file stays a complete,
+    accurate description of the machine at all times, which is what makes
+    rebuilding it identically elsewhere, diffing two points in time, or
+    rolling it back possible at all. An imperative history of "I ran this,
+    then I ran that" cannot be replayed or rolled back the same way a
+    declared end state can.</p>
   </section>
 
   <section>
@@ -48,11 +53,17 @@ SYS_SERVICES="
 	sshd
 "</pre>
     <p><strong>SYS_PACKAGES is the complete list</strong>, not a list of
-    things to add. Deleting a name removes that package on the next rebuild,
-    along with anything that was only installed as its dependency.</p>
-    <p>Only <em>explicitly</em> installed packages belong here. Dependencies
-    are alpm's business — listing them yourself is wrong and unnecessary.</p>
-    <p><strong>SYS_SERVICES</strong> is the same for what runs at boot.</p>
+    things to add on top of whatever is already there. Deleting a name
+    removes that package on the next rebuild, along with anything that was
+    only ever installed as its dependency and is not needed by anything
+    else still listed.</p>
+    <p>Only <em>explicitly</em> installed packages belong in this list.
+    Dependencies are alpm's business to track — listing them yourself here
+    is both unnecessary (alpm already knows) and wrong (it would make them
+    look explicit, which changes what a later rebuild considers removable).</p>
+    <p><strong>SYS_SERVICES</strong> works the same way for what runs at
+    boot: the complete list of what should be enabled, not an addition to
+    whatever is currently enabled.</p>
   </section>
 
   <section>
@@ -67,66 +78,90 @@ arctic-rebuild --dry-run  show what would change, change nothing</pre>
   + enable services: sshd
 :: now on generation 5
 :: rebuild complete</pre>
-    <p>Removals go through <code>alpm del+deps</code>, so orphaned
-    dependencies go too — while alpm's own protected-package list still
-    refuses to remove the base system no matter what the file says.</p>
+    <p>Removals go through <code>alpm del+deps</code>, so anything that was
+    only pulled in as tmux's dependency and is not needed elsewhere goes too
+    — while alpm's own protected-package list still refuses to remove the
+    base system no matter what the file happens to say, so a typo that
+    accidentally drops <code>glibc</code> from the list cannot actually take
+    the machine down.</p>
   </section>
 
   <section>
     <h2>The first rebuild does not remove everything</h2>
-    <p>An empty <code>system.conf</code> read literally would mean "this
-    machine should have no packages". Instead, the first rebuild on a machine
-    where the file is empty <em>seeds</em> it from what is actually installed
-    and changes nothing. You get an accurate file to start editing from.</p>
-    <p>After an install this has already happened —
+    <p>An empty <code>system.conf</code>, read completely literally, would
+    mean "this machine should have no packages at all" — which is never
+    what an empty file actually means the first time you look at it.
+    Instead, the first rebuild on a machine where the file is empty (or does
+    not exist yet) <em>seeds</em> it from what is actually installed and
+    enabled right now, and changes nothing on that run. You end up with an
+    accurate starting file to edit from, rather than a destructive first
+    surprise.</p>
+    <p>After an install this has already happened once —
     <code>arctic-strap</code> writes <code>system.conf</code> from the
-    install itself.</p>
+    install itself, so the seeding behaviour mainly matters for a machine
+    that predates the declarative layer, or one where the file was deleted
+    by hand.</p>
   </section>
 
   <section>
     <h2>Every rebuild is undoable</h2>
-    <p>A rebuild records a generation before it changes anything and another
-    after it succeeds. If an edit was wrong:</p>
+    <p>A rebuild records a generation before it changes anything, and
+    another once it has succeeded. If an edit turns out to be wrong:</p>
     <pre class="code">arctic rollback          go back one generation
 arctic rollback 3        go back to a specific one
-arctic diff 3 5          see what changed between two</pre>
-    <p>And if the result will not boot, the recent generations are in the
-    boot menu. See <a href="/generations.html">generations and
-    rollback</a>.</p>
+arctic diff 3 5          see exactly what changed between two</pre>
+    <p>And if the result will not even boot, the recent generations are
+    listed directly in the boot menu. Full detail in
+    <a href="/generations.html">generations and rollback</a> — this is the
+    part of the declarative model that actually makes editing
+    <code>system.conf</code> feel safe to do casually rather than something
+    you approach carefully.</p>
   </section>
 
   <section>
     <h2>Services</h2>
     <p>Services are declared once, in <code>SYS_SERVICES</code>, regardless
-    of which init is running. Arctic's own service definitions live in
-    <code>/etc/rc.d</code> as a handful of variables, and are translated into
-    OpenRC scripts, runit run files, dinit services, s6 directories or
-    systemd units as needed — see <a href="/init.html">init systems</a>.</p>
-    <p>Directly, without editing the file:</p>
+    of which init is actually running on the machine. Arctic's own service
+    definitions live in <code>/etc/rc.d</code> as a handful of shell
+    variables per service, and are translated into OpenRC scripts, runit run
+    files, dinit service files, s6 service directories or systemd units as
+    needed — see <a href="/init.html">init systems</a> for exactly how that
+    translation works and what it does and does not cover yet.</p>
+    <p>Directly, without editing the file — useful for a quick one-off
+    change or for checking current state:</p>
     <pre class="code">service list
 service enable sshd
 service disable sshd
 service start sshd
 service status sshd</pre>
-    <p><code>service enable</code> and the config are the same thing —
-    enabling a service adds it to what the next rebuild considers correct
-    only if you also list it. If you enable something by hand and then
-    rebuild, the rebuild will turn it back off, because the file did not
-    mention it. That is the point of a declarative system, and it is worth
-    knowing before it surprises you.</p>
+    <p><code>service enable</code> and the config file describe the same
+    underlying state. Enabling a service by hand marks it enabled right now,
+    but if <code>system.conf</code> does not also list it, the next rebuild
+    will read the file, see that service is not declared, and turn it back
+    off — because from the declarative system's point of view, an enabled
+    service the file does not mention is exactly the same kind of drift as
+    an installed package the file does not mention. This is intentional and
+    is the entire point of a declarative system, but it is worth knowing
+    about before it surprises you the first time a service you enabled by
+    hand quietly disappears on the next <code>arctic-rebuild</code>.</p>
   </section>
 
   <section>
     <h2>What is not declarative yet</h2>
-    <p>Honestly: <code>system.conf</code> covers packages and services.
-    Hostname, locale, timezone, users and the network are set at install time
-    from <code>install.conf</code> and are not currently reconciled by
-    <code>arctic-rebuild</code>. Changing them means editing the system
-    directly. That gap is known and is the next thing to close.</p>
+    <p>Honestly: <code>system.conf</code> currently covers packages and
+    services, and that is genuinely all it covers. Hostname, locale,
+    timezone, user accounts and network configuration are set once at
+    install time from <code>install.conf</code> and are not reconciled by
+    <code>arctic-rebuild</code> — changing any of those on a running system
+    means editing it directly (<code>hostname</code>, editing
+    <code>/etc/locale.conf</code>, <code>usermod</code>, and so on), the
+    same as on a non-declarative distribution. That gap is known, is the
+    obvious next thing to close, and is called out here rather than implied
+    to already work.</p>
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 
   <footer>

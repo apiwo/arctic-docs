@@ -32,9 +32,12 @@
         <li><a href="/kernels.html">kernels</a></li>
         <li><a href="/packages.html">packages (alpm)</a></li>
         <li><a href="/desktops.html">desktops and audio</a></li>
+        <li><a href="/networking.html">networking</a></li>
         <li><a href="/shell.html">ephemeral shells</a></li>
         <li><a href="/musl.html">musl</a></li>
         <li><a href="/building.html">building from source</a></li>
+        <li><a href="/troubleshooting.html">troubleshooting</a></li>
+        <li><a href="/reference.html">install.conf reference</a></li>
       </ul>
     </div>
     <div class="art">
@@ -69,9 +72,18 @@
     file. If an edit turns out to be wrong, you roll back to a numbered
     generation — from the shell, or from the boot menu if it will not boot.</p>
 
-    <p>It is not a fork of anything. The package manager (<code>alpm</code>),
-    the installer, the init scripts and the ports tree were all written for
-    it. The kernel is a fork of Linux LTS with the ZEN patchset on top.</p>
+    <p>It is not a fork of anything at the distribution level. The package
+    manager (<code>alpm</code>), the installer, the init scripts and the
+    ports tree were all written for it, specifically, from nothing. The
+    kernel is a genuine fork of Linux LTS with the ZEN patchset on top,
+    maintained as its own project.</p>
+
+    <p>Nothing here is a toy re-skin of Arch or Gentoo tooling wearing a
+    different name. The install flow, the package format, the declarative
+    layer and the boot-time generation switching are Arctic's own design,
+    built to solve problems that came up while actually running this
+    system — most of the "why" notes throughout these docs point at a real
+    bug that was found and fixed, not a hypothetical.</p>
   </section>
 
   <section>
@@ -89,6 +101,8 @@
           <td>go back to an earlier generation</td></tr>
       <tr><td><code>arctic-shell</code></td>
           <td>a throwaway environment with packages in it, gone when you exit</td></tr>
+      <tr><td><code>/run/arctic/boot.log</code></td>
+          <td>what actually happened during the last boot, always</td></tr>
     </table>
   </section>
 
@@ -97,11 +111,14 @@
     <p><a href="/install.html">Install</a> covers getting it onto a machine.
     <a href="/configure.html">Declarative configuration</a> covers everything
     after that, and is the part worth reading properly — it is what makes
-    Arctic different from an ordinary source distribution.</p>
+    Arctic different from an ordinary source distribution. If something is
+    not working, <a href="/troubleshooting.html">troubleshooting</a> covers
+    the real issues found and fixed while building this, with the actual
+    root cause of each one rather than a generic checklist.</p>
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 
   <footer>

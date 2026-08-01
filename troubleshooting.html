@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Troubleshooting — Arctic Linux docs</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <div class="wrap" style="padding:0;">
+    <a href="/">docs</a>
+    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://ports-arctic.apiwow.net">ports</a>
+    <a href="https://github.com/apiwo/arctic-linux">github</a>
+  </div>
+</nav>
+<div class="wrap">
+  <header class="hero" style="padding:28px 0 8px;">
+    <h1 style="font-size:32px;">Troubleshooting</h1>
+  </header>
+
+  <section>
+    <h2>Start with the boot log</h2>
+    <p>Every boot writes a record of what actually happened to
+    <code>/run/arctic/boot.log</code>, copied to <code>/var/log/boot.log</code>
+    once the boot finishes so it survives past that session:</p>
+    <pre class="code">cat /run/arctic/boot.log
+cat /var/log/boot.log     # from a previous boot</pre>
+    <p>This did not always exist. Service failures used to be sent straight
+    to <code>/dev/null</code> by <code>rc.boot</code>, on the theory that a
+    quiet boot should stay quiet — but the actual effect was that a service
+    which failed to start left <em>no trace anywhere</em>: the console
+    showed a plain <code>failed</code> with no detail, there was nothing in
+    any log, and diagnosing why meant re-running the exact failing command
+    by hand and hoping the failure reproduced identically outside of boot
+    context. The log now records, for every service: that it was
+    considered, whether it started, and if not, its actual stderr output —
+    which is what made it possible to find the three separate causes behind
+    the iwd/dbus failure below in the first place, rather than continuing to
+    guess.</p>
+  </section>
+
+  <section>
+    <h2>"failed to initialize dbus" from iwctl or iwd</h2>
+    <p>This looked like a single dbus problem and was actually three
+    unrelated ones, found one at a time by adding boot logging and reading
+    what it said instead of guessing further:</p>
+    <p><strong>1. <code>/var/run</code> did not exist.</strong> dbus itself
+    listens on <code>/run/dbus/system_bus_socket</code> and was running
+    correctly the entire time — confirmed directly with
+    <code>dbus-send --system ... org.freedesktop.DBus.ListNames</code>,
+    which succeeded. But iwd is built on ell, a separate D-Bus client
+    library, and ell's default system bus lookup checks
+    <code>/var/run/dbus</code> specifically, not <code>/run/dbus</code>.
+    On a system where <code>/var/run</code> is not a symlink to
+    <code>/run</code> (the traditional FHS arrangement, and one this rootfs
+    build had simply never set up), that path does not exist, and iwd
+    cannot find a bus it is sitting right next to. Fixed by adding
+    <code>/var/run -&gt; ../run</code> and <code>/var/lock -&gt; ../run/lock</code>
+    as two more of the merged-filesystem symlinks created during the rootfs
+    build.</p>
+    <p><strong>2. The <code>netdev</code> group did not exist.</strong>
+    iwd ships its own D-Bus policy file
+    (<code>/usr/share/dbus-1/system.d/iwd-dbus.conf</code>) granting members
+    of a group called <code>netdev</code> access to
+    <code>net.connman.iwd</code>. dbus-daemon logs
+    <code>Unknown group "netdev" in message bus configuration file</code>
+    and — this is the part that made it hard to spot — does not fail to
+    start over this. It logs the warning, discards that one policy file, and
+    continues running with everything else intact, so dbus itself looked
+    completely healthy while iwd was quietly unable to claim its own bus
+    name because the specific policy permitting it had been silently
+    dropped. Fixed by adding <code>netdev</code> as a real system group,
+    both on the live ISO and by the installer for a freshly installed
+    system.</p>
+    <p><strong>3. No machine ID had ever been generated.</strong>
+    <code>dbus-daemon --system</code> refuses to start at all without
+    <code>/etc/machine-id</code> (or the older
+    <code>/var/lib/dbus/machine-id</code> location) being present, and
+    nothing on Arctic ever generated one. Combined with
+    <code>rc.boot</code> sending service output to <code>/dev/null</code> at
+    the time, this specific failure was completely invisible — dbus simply
+    never started, with nothing on screen or in any log to say why. Fixed
+    by generating one on <code>/etc/rc.d/dbus</code>'s first start, via
+    <code>dbus-uuidgen</code> if present or a random-hex fallback otherwise,
+    and never regenerating it again once one exists.</p>
+    <p>To check the state of all three directly on a running system:</p>
+    <pre class="code">service status dbus
+service status iwd
+ls -l /etc/machine-id
+readlink /var/run
+grep netdev /etc/group</pre>
+  </section>
+
+  <section>
+    <h2>A service is enabled but never starts</h2>
+    <p>Check the boot log first — as of the fix above, a service that is
+    enabled but has no executable script at <code>/etc/rc.d/&lt;name&gt;</code>
+    is now reported explicitly (<code>no executable /etc/rc.d/name</code>)
+    rather than silently skipped the way it used to be. If the script does
+    exist and is executable, run it by hand to see the real error:</p>
+    <pre class="code">/etc/rc.d/some-service start</pre>
+    <p>If it is a translated definition under a non-busybox init (OpenRC,
+    runit, and so on), regenerate it explicitly in case the translation is
+    stale relative to <code>/etc/rc.d</code>:</p>
+    <pre class="code">arctic-init-setup openrc      # or whichever init is actually running</pre>
+  </section>
+
+  <section>
+    <h2>fstab looks wrong, or the wrong thing is mounted</h2>
+    <p><code>/etc/fstab</code> is generated once, at install time, directly
+    from <code>/proc/mounts</code> at the moment the installer finishes —
+    not reconstructed from the config afterward, and not regenerated by
+    <code>arctic-rebuild</code>. If you change the disk layout after
+    installing (add a partition, move something), fstab does not update
+    itself; edit it by hand, the same as on any other distribution past the
+    install step.</p>
+  </section>
+
+  <section>
+    <h2>A rebuild made something worse</h2>
+    <pre class="code">arctic rollback</pre>
+    <p>goes back exactly one generation, undoing the most recent rebuild.
+    If the system will not boot at all, choose the previous "Arctic Linux
+    (generation N)" entry directly from the boot menu instead — full detail
+    on both paths in <a href="/generations.html">generations and
+    rollback</a>.</p>
+  </section>
+
+  <section>
+    <h2>A build fails with a permission or read-only error</h2>
+    <p>This is the sandbox working as intended, not a bug — see
+    <a href="/building.html">building from source</a> for exactly why
+    everything builds under a read-only host by design. Check the recipe for
+    a missing <code>DESTDIR</code>/<code>pkgdir</code> in its
+    <code>package()</code> step before assuming anything else is wrong.</p>
+  </section>
+
+  <section>
+    <h2>A package built earlier now fails to build again</h2>
+    <p>If a recipe was recently regenerated from
+    <code>ports/manifest.tsv</code> and a hand fix to it has disappeared,
+    check for a missing <code>recipe.local</code> marker next to it — see
+    <a href="/packages.html">packages</a>. This has happened more than once
+    to real recipes in this tree and is always the same root cause: a
+    hand-written recipe with no marker gets silently regenerated back to the
+    template on the next manifest-driven pass.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a> · <a href="/reference.html">install.conf reference</a></p>
+  </section>
+
+  <footer>
+    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+  </footer>
+</div>
+</body>
+</html>

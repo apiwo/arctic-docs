@@ -22,7 +22,9 @@
 
   <section>
     <h2>One command</h2>
-    <p>Boot the ISO. Wired networking comes up on its own; for wireless:</p>
+    <p>Boot the ISO. Wired networking comes up on its own via DHCP; for
+    wireless, see <a href="/networking.html">networking</a> for the full
+    picture, but the short version:</p>
     <pre class="code">iwctl station wlan0 connect YOUR-NETWORK</pre>
 
     <p>Then edit the config and run the installer:</p>
@@ -31,15 +33,26 @@ arctic-strap</pre>
 
     <p>That is the whole procedure. There are no menus, no prompts and no
     arguments — <code>arctic-strap</code> takes none. Which disk to use is
-    something the config says, not something you type.</p>
+    something the config says, not something you type on the command line.
+    This was not always true: earlier versions took a mount-point argument
+    (<code>arctic-strap /mnt</code>), which meant remembering to mount the
+    target yourself first and kept the actual truth about the install split
+    between two places — the config file and whatever you happened to type.
+    Now there is exactly one place: the file.</p>
 
     <p><code>nano</code>, <code>vim</code> and <code>nvim</code> are all on
-    the ISO. <code>vi</code> is vim.</p>
+    the ISO, along with JetBrains Mono and the Nerd Font symbol set so a
+    terminal with icons works from the installer onward. <code>vi</code> is
+    a symlink to <code>vim</code> — busybox ships its own minimal
+    <code>vi</code> applet, but Arctic's live image replaces that symlink
+    with the real editor rather than leaving both around under different
+    names.</p>
   </section>
 
   <section>
     <h2>The config is checked first</h2>
-    <p>Before anything is written, the whole config is validated. Either:</p>
+    <p>Before anything is written to disk, the whole config is validated in
+    one pass. Either:</p>
     <pre class="code">Config file accepted
   /etc/arctic/install.conf
   disk           /dev/sda (whole disk - everything on it is destroyed)
@@ -47,7 +60,7 @@ arctic-strap</pre>
   kernel         Arctic-kernel
   hostname       arctic
   desktop        xfce</pre>
-    <p>or the full list of what is wrong:</p>
+    <p>or the full list of what is wrong, all at once:</p>
     <pre class="code">Config file has errors
   /etc/arctic/install.conf
 
@@ -56,78 +69,114 @@ arctic-strap</pre>
   A_ENCRYPT=yes but A_ENCRYPT_PASS is empty
 
 Nothing has been changed. Fix the config and run arctic-strap again.</pre>
-    <p>Errors are reported all at once, not one per run, and nothing has been
-    touched when they are. To check without installing:</p>
+    <p>Every error is reported together rather than one per run — you do not
+    fix a typo, rerun, hit the next mistake, fix that, rerun again. Warnings
+    (a setting that will work but is probably not what you meant) are shown
+    separately and do not block the install. To check a config without
+    installing anything:</p>
     <pre class="code">arctic-strap -n</pre>
+    <p>or against a specific file:</p>
+    <pre class="code">arctic-strap -n -c /path/to/some.conf</pre>
   </section>
 
   <section>
     <h2>Choosing a disk</h2>
-    <p>Two ways. Pick one — setting both is an error.</p>
+    <p>Two ways. Pick one — setting both is a validation error, since it
+    would be ambiguous which one wins.</p>
 
     <h3>A whole disk</h3>
-    <p>Arctic partitions and formats it. Everything on it is destroyed.</p>
+    <p>Arctic partitions and formats it: an ESP plus root on UEFI, a
+    BIOS-boot partition plus root on legacy BIOS. Everything already on the
+    disk is destroyed.</p>
     <pre class="code">A_DISK=/dev/sda
 A_ROOT_FS=btrfs</pre>
 
     <h3>Partitions you made yourself</h3>
-    <p>Partition with <code>cfdisk</code> first, then point Arctic at the
-    results. Nothing is formatted unless you ask.</p>
+    <p>Partition with <code>cfdisk</code>, <code>sfdisk</code> or
+    <code>parted</code> first — all three are on the ISO — then point Arctic
+    at the results. Nothing is formatted unless you say so.</p>
     <pre class="code">A_ROOT_PART=/dev/sda2
 A_BOOT_PART=/dev/sda1
 A_HOME_PART=/dev/sda3
 A_FORMAT=no</pre>
-    <p>With <code>A_FORMAT=no</code> Arctic mounts them as they are and
-    installs into whatever is already there — which is how you keep an
-    existing <code>/home</code>. An existing btrfs is detected and its
-    <code>@</code> subvolume layout used, rather than the top level.</p>
+    <p>With <code>A_FORMAT=no</code> Arctic mounts the partitions exactly as
+    they are and installs into whatever is already there — which is the way
+    to keep an existing <code>/home</code> across a reinstall of root. An
+    existing btrfs partition is detected by its filesystem type and its
+    <code>@</code> subvolume layout is mounted, rather than the raw top
+    level, so an install onto a btrfs root you made earlier lands correctly
+    without needing to know the subvolume ID yourself.</p>
+    <p>Setting <code>A_FORMAT=yes</code> with existing partitions formats
+    them fresh but does not repartition — the sizes and boundaries you chose
+    stay exactly as they are.</p>
   </section>
 
   <section>
     <h2>Filesystems</h2>
     <table>
-      <tr><td><code>ext4</code></td><td>the default</td></tr>
+      <tr><td><code>ext4</code></td><td>the default — boring and reliable</td></tr>
       <tr><td><code>btrfs</code></td><td>subvolumes, snapshots, transparent compression</td></tr>
-      <tr><td><code>xfs</code></td><td>large files</td></tr>
-      <tr><td><code>f2fs</code></td><td>flash</td></tr>
-      <tr><td><code>ext3</code>, <code>ext2</code></td><td>older</td></tr>
-      <tr><td><code>zfs</code></td><td>needs an out-of-tree module; least tested</td></tr>
+      <tr><td><code>xfs</code></td><td>good with very large files</td></tr>
+      <tr><td><code>f2fs</code></td><td>tuned for flash storage</td></tr>
+      <tr><td><code>ext3</code>, <code>ext2</code></td><td>for when you specifically need an older format</td></tr>
+      <tr><td><code>zfs</code></td><td>needs an out-of-tree kernel module; least tested path in the installer</td></tr>
     </table>
-    <p>btrfs gets <code>@</code>, <code>@home</code>, <code>@snapshots</code>
-    and <code>@log</code> subvolumes, so root can roll back without taking
-    your home directory with it. That split is what
-    <code>A_SNAPSHOT=btrfs</code> needs:</p>
+    <p>btrfs gets four subvolumes: <code>@</code> for root,
+    <code>@home</code>, <code>@snapshots</code> and <code>@log</code>. The
+    split matters — it is what lets a snapshot restore root without pulling
+    your home directory or the log history back with it. That split is also
+    what <code>A_SNAPSHOT=btrfs</code> depends on:</p>
     <pre class="code">A_ROOT_FS=btrfs
 A_SNAPSHOT=btrfs
 A_BTRFS_OPTS="rw,noatime,compress=zstd:3,space_cache=v2"</pre>
+    <p>The mount options above are the defaults if you leave
+    <code>A_BTRFS_OPTS</code> unset — <code>zstd:3</code> compression is a
+    reasonable middle ground between size and CPU cost, and
+    <code>space_cache=v2</code> avoids a slow free-space rescan on every
+    mount that the v1 cache format is prone to.</p>
   </section>
 
   <section>
     <h2>Encryption</h2>
-    <p>LUKS2, under whichever filesystem you chose:</p>
+    <p>Full-disk LUKS2, applied under whichever filesystem you chose:</p>
     <pre class="code">A_ENCRYPT=yes
 A_ENCRYPT_PASS=your-passphrase</pre>
-    <p>An initramfs with cryptsetup and the dm-crypt modules is generated
-    automatically, and the passphrase prompt appears before anything else at
-    boot. Works with every filesystem except zfs, which encrypts itself.</p>
+    <p>An initramfs bundling cryptsetup and the dm-crypt kernel modules is
+    generated automatically for an encrypted install — Arctic's kernel
+    normally needs no initramfs at all, since storage and filesystem drivers
+    are built in rather than modular, but an encrypted root is the one case
+    where something has to run before <code>root=</code> means anything: the
+    passphrase prompt. That prompt appears at boot, before anything else,
+    reading <code>rd.luks.uuid=</code> off the kernel command line to find
+    the right volume.</p>
+    <p>Works with every filesystem choice except zfs, which encrypts itself
+    and would otherwise mean double encryption for no benefit.</p>
   </section>
 
   <section>
     <h2>Boot</h2>
-    <pre class="code">A_BOOT_FW=efi          # or bios; detected if unset
-A_BOOTLOADER=limine    # or grub
+    <pre class="code">A_BOOT_FW=efi          # or bios; detected automatically if unset
+A_BOOTLOADER=limine    # or grub, for multi-booting alongside something that expects it
 A_BOOT_MOUNT=/boot/efi
 A_BOOT_TIMEOUT=3
 A_KERNEL_ARGS=""
 A_GENERATIONS=5</pre>
-    <p><code>A_GENERATIONS</code> is how many previous configurations appear
-    in the boot menu — see <a href="/generations.html">generations</a>.</p>
+    <p>Firmware detection reads <code>/sys/firmware/efi</code> — if that
+    directory exists, the machine booted UEFI and gets a FAT32 ESP; if it
+    does not, BIOS and a small unformatted BIOS-boot partition instead.</p>
+    <p><code>A_GENERATIONS</code> decides how many previous configurations
+    appear as separate entries in the boot menu, each bootable on its own —
+    see <a href="/generations.html">generations and rollback</a> for what
+    that actually does at boot time.</p>
   </section>
 
   <section>
     <h2>Everything else</h2>
     <p>The shipped <code>install.conf</code> documents every setting inline,
-    all commented out with defaults shown. The rest, in brief:</p>
+    all commented out with its default shown, organised into sections. The
+    <a href="/reference.html">full reference</a> lists every variable
+    alphabetically if you want the complete picture in one place; the
+    highlights:</p>
     <table>
       <tr><td><code>A_KERNEL</code></td><td>which kernel — see <a href="/kernels.html">kernels</a></td></tr>
       <tr><td><code>A_INIT</code></td><td>PID 1 — see <a href="/init.html">init systems</a></td></tr>
@@ -135,35 +184,59 @@ A_GENERATIONS=5</pre>
           <td>see <a href="/desktops.html">desktops and audio</a></td></tr>
       <tr><td><code>A_USER</code>, <code>A_USERPASS</code>, <code>A_ROOTPASS</code></td>
           <td>accounts; empty root password means the account is locked</td></tr>
-      <tr><td><code>A_NET</code></td><td><code>offline</code>, <code>dhcp</code>, <code>wifi</code>, <code>static</code></td></tr>
+      <tr><td><code>A_NET</code>, <code>A_WIFI_SSID</code>, <code>A_IP</code></td>
+          <td>see <a href="/networking.html">networking</a></td></tr>
       <tr><td><code>A_HOSTNAME</code>, <code>A_TZ</code>, <code>A_LOCALE</code>, <code>A_KEYMAP</code></td>
-          <td>the usual</td></tr>
+          <td>the usual system identity settings</td></tr>
       <tr><td><code>A_SWAP</code></td><td><code>none</code>, <code>file</code>, <code>partition</code></td></tr>
+      <tr><td><code>A_ZRAM</code></td><td>compressed swap in RAM, composes with A_SWAP rather than replacing it</td></tr>
       <tr><td><code>A_PKGS</code>, <code>A_FONTS</code>, <code>A_SERVICES</code></td>
-          <td>extra things to install and enable</td></tr>
+          <td>extra things to install and enable, beyond what other settings imply</td></tr>
       <tr><td><code>A_PKGIT</code></td><td>install pkgit alongside alpm</td></tr>
+      <tr><td><code>A_MOUNTS</code></td><td>extra fstab lines for storage beyond root/boot/home</td></tr>
+      <tr><td><code>A_POST</code></td><td>shell commands run inside the new system once everything else is done</td></tr>
     </table>
   </section>
 
   <section>
-    <h2>What the installer does</h2>
-    <p>In order: validate the config, partition or mount, unpack the base
-    system, install the kernel and firmware, install everything the config
-    asked for, create accounts, write <code>/etc/fstab</code> from the real
-    mount table, install the bootloader, seed
-    <code>/etc/arctic/system.conf</code> from what it just did, and record
-    generation 1.</p>
-    <p>The fstab is generated from <code>/proc/mounts</code>, not from the
-    config — whatever the install actually ended up with is what gets
-    recorded, with <code>UUID=</code> throughout so disk reordering does not
-    break the next boot.</p>
-    <p>After it finishes, <code>system.conf</code> already describes the
-    machine, and generation 1 is the machine as installed. Both of those
-    matter from the first rebuild onward.</p>
+    <h2>What the installer does, in order</h2>
+    <p>Validate the config and stop if anything is wrong. Partition (if
+    <code>A_DISK</code> was set) or mount the given partitions. Unpack the
+    base system. Install the chosen kernel and firmware. Install the init
+    system if not busybox, translating services for it. Install everything
+    else the config asked for — desktop, audio, networking tools, extra
+    packages, fonts. Create accounts. Write <code>/etc/fstab</code> from the
+    real mount table. Install the bootloader. Seed
+    <code>/etc/arctic/system.conf</code> from what was just installed, and
+    record generation 1.</p>
+    <p>The fstab step is worth understanding on its own: it is generated
+    from <code>/proc/mounts</code> after everything is mounted, not
+    reconstructed from the config. Whatever the install actually ended up
+    with — including the case where formatting an existing partition was
+    skipped and the real filesystem type differs from what you expected — is
+    what gets recorded, with <code>UUID=</code> used throughout so a disk
+    enumerated in a different order on the next boot does not break
+    anything.</p>
+    <p>After the installer finishes, <code>system.conf</code> already
+    describes the machine accurately and generation 1 is the machine exactly
+    as installed — both of those already exist before the first
+    <code>arctic-rebuild</code> ever runs, which matters because it means
+    there is always something to compare against or roll back to, even on a
+    freshly installed system nobody has touched yet.</p>
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
+    <h2>After the install</h2>
+    <p>Reboot, or stay to poke around with <code>A_CHROOT_SHELL=yes</code>.
+    On first boot the account you created is ready, root is locked if you
+    left <code>A_ROOTPASS</code> empty, and the network mode you chose is
+    already configured. From here, ongoing changes go through
+    <code>system.conf</code> — see
+    <a href="/configure.html">declarative configuration</a>.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 
   <footer>
