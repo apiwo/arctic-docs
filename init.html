@@ -30,9 +30,7 @@
       <tr><td><code>sysvinit</code></td><td>the traditional System V init. <code>/etc/inittab</code>, <code>/etc/rc3.d</code>.</td></tr>
       <tr><td><code>runit</code></td><td>small, direct process supervision. <code>/etc/sv</code>, <code>sv up</code>/<code>sv down</code>.</td></tr>
       <tr><td><code>dinit</code></td><td>dependency handling in a small footprint. <code>dinitctl</code>.</td></tr>
-      <tr><td><code>s6-66</code></td><td>s6 and s6-rc supervision with the 66 frontend. Incomplete — see below.</td></tr>
-      <tr><td><code>systemd</code></td><td>units, journald, the full suite. Not packaged yet.</td></tr>
-      <tr><td><code>systemd-libre</code></td><td>systemd with the nonfree firmware loading paths removed. Not packaged yet either.</td></tr>
+      <tr><td><code>systemd-libre</code></td><td>units, journald, the usual suite, built without the nonfree firmware loading paths. Not packaged yet — see below.</td></tr>
     </table>
     <p>Choosing anything other than busybox installs that init and its
     supervision tools, then translates every service Arctic enables into
@@ -109,14 +107,8 @@ arctic-init-setup runit --root /mnt   or write them into a target root, e.g. fro
       <tr><td>sysvinit</td><td><code>/etc/init.d</code>, symlinked into <code>/etc/rc3.d</code> and <code>/etc/rc5.d</code></td></tr>
       <tr><td>runit</td><td><code>/etc/sv</code>, <code>/etc/runit/runsvdir/default</code>, one-shots in <code>/etc/runit/1</code>–<code>3</code></td></tr>
       <tr><td>dinit</td><td><code>/etc/dinit.d</code>, enabled ones linked into <code>/etc/dinit.d/boot.d</code></td></tr>
-      <tr><td>s6-66</td><td><code>/etc/s6/sv</code> service directories, <code>/etc/66/service</code> frontends</td></tr>
-      <tr><td>systemd</td><td><code>/etc/systemd/system</code></td></tr>
+      <tr><td>systemd-libre</td><td><code>/etc/systemd/system</code></td></tr>
     </table>
-    <p>s6 needs its service database compiled explicitly once installed,
-    which is not something the translation step can do for you ahead of
-    time since it depends on the exact set of enabled services on the
-    target:</p>
-    <pre class="code">s6-rc-compile /etc/s6/rc/compiled /etc/s6/sv</pre>
   </section>
 
   <section>
@@ -132,21 +124,12 @@ arctic-init-setup runit --root /mnt   or write them into a target root, e.g. fro
     installing Arctic for the first time, use the default; if you are
     curious about one of the alternatives, treat it as something worth
     testing carefully rather than assuming parity with busybox's own path.</p>
-    <p><code>s6-66</code> is genuinely incomplete right now: <code>s6</code>
-    itself, <code>skalibs</code> and <code>execline</code> build and package
-    fine, but <code>s6-rc</code> and <code>s6-linux-init</code> do not — the
-    skarnet build's dependency chain resolves library prerequisites through
-    make's own <code>-l</code> prerequisite mechanism against
-    <code>.LIBPATTERNS</code>, and getting a staged (not installed
-    system-wide) dependency visible to that mechanism has not been solved
-    yet. Choosing <code>A_INIT=s6-66</code> today gets you the fallback to
-    busybox init and an honest message explaining why, not a partially
-    working system.</p>
-    <p>systemd and systemd-libre are not packaged at all yet — the
+    <p><code>systemd-libre</code> is not packaged at all yet — the
     dependency chain (udev, a full elogind or logind stack, and so on) is
-    large, and building it correctly has not happened. The config lists both
-    as options because the intent is real, but selecting either currently
-    falls back the same way s6-66 does.</p>
+    large, and building it correctly has not happened. It stays in the
+    config because the intent is real, but selecting it today falls back to
+    busybox init with an honest message explaining why, the same as any
+    other choice whose packages are not available.</p>
   </section>
 
   <section>
