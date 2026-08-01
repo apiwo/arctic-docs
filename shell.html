@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>arctic-shell — Arctic Linux docs</title>
+<title>Ephemeral shells — Arctic Linux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -17,40 +17,49 @@
 </nav>
 <div class="wrap">
   <header class="hero" style="padding:28px 0 8px;">
-    <h1 style="font-size:32px;">arctic-shell</h1>
+    <h1 style="font-size:32px;">Ephemeral shells</h1>
   </header>
 
   <section>
-    <p>An ephemeral, reproducible package environment — the same idea as
-    <code>nix-shell</code>/<code>guix shell</code>, built on alpm.</p>
+    <h2>Throwaway environments</h2>
+    <p>A shell with packages in it that do not touch the real system:</p>
+    <pre class="code">arctic-shell python rust
+arctic-shell --keep ffmpeg
+arctic-shell --network node</pre>
+    <p>The environment is built in its own root, entered with
+    <code>chroot</code>, and removed when you exit. Nothing is installed on
+    the machine itself. This is Arctic's equivalent of
+    <code>nix-shell</code>.</p>
   </section>
 
   <section>
-    <h2>Usage</h2>
-    <pre class="code">arctic-shell &lt;pkgs&gt;...                  <span class="c"># drop into an interactive shell</span>
-arctic-shell &lt;pkgs&gt;... -- &lt;cmd&gt;...      <span class="c"># run it, tear the environment down after</span>
-arctic-shell &lt;pkgs&gt;... -  &lt;cmd&gt;...      <span class="c"># run it, stay in the shell after</span>
-arctic-shell --keep &lt;pkgs&gt;...           <span class="c"># leave the environment on disk for next time</span>
-arctic-shell --network &lt;pkgs&gt;...        <span class="c"># give it a real network connection</span></pre>
-    <pre class="code">arctic-shell clang -- clang file.c
-arctic-shell --keep rust cargo</pre>
+    <h2>Options</h2>
+    <table>
+      <tr><td><code>--keep</code></td><td>do not remove it on exit; reuse it next time</td></tr>
+      <tr><td><code>--network</code></td><td>leave networking available inside</td></tr>
+      <tr><td><code>-- cmd</code></td><td>run a command instead of an interactive shell</td></tr>
+    </table>
+    <p><code>--keep</code> is sticky: once an environment is kept, a later
+    invocation without the flag will not silently delete it.</p>
   </section>
 
   <section>
-    <h2>How it works</h2>
-    <p>Builds a scratch root with exactly the named packages installed
-    (plus the minimal glibc/busybox/toybox base every root needs to have a
-    working shell at all), then chroots into it with your current directory
-    available at the same path, so local files are right there. Without
-    <code>--network</code> the environment has no network access at all — a
-    separate network namespace, not just a missing route.</p>
-    <p>Environments are content-addressed: asking for the same package set
-    again reuses whatever was already built for it, at
-    <code>/var/cache/arctic-shell/&lt;hash&gt;</code>.</p>
+    <h2>Cleaning up</h2>
+    <pre class="code">arctic gc</pre>
+    <p>Prunes the package cache, orphaned dependencies, old generations and
+    unused shell environments older than a week that were not kept.</p>
+    <p>Cleanup verifies every bind mount is actually unmounted, via
+    <code>/proc/mounts</code>, before removing anything. If it cannot
+    confirm that, it leaves the environment in place and says so — deleting a
+    tree with live mounts under it is not a mistake worth making twice.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
   </section>
 
   <footer>
-    <p><a href="/">&larr; all docs</a> — Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

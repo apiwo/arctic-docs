@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desktops and audio — Arctic Linux docs</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <div class="wrap" style="padding:0;">
+    <a href="/">docs</a>
+    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://ports-arctic.apiwow.net">ports</a>
+    <a href="https://github.com/apiwo/arctic-linux">github</a>
+  </div>
+</nav>
+<div class="wrap">
+  <header class="hero" style="padding:28px 0 8px;">
+    <h1 style="font-size:32px;">Desktops and audio</h1>
+  </header>
+
+  <section>
+    <h2>Desktops</h2>
+    <pre class="code">A_DESKTOP=xfce</pre>
+    <table>
+      <tr><td><code>none</code></td><td>console only, the default</td></tr>
+      <tr><td><code>xfce</code></td><td>XFCE 4.22 with LightDM</td></tr>
+      <tr><td><code>kde</code></td><td>KDE Plasma 6 with SDDM</td></tr>
+      <tr><td><code>niri</code></td><td>Niri, scrollable-tiling Wayland</td></tr>
+      <tr><td><code>dwm</code></td><td>dwm, suckless and tiny</td></tr>
+    </table>
+    <p>Each is a profile package that pulls the whole environment — session,
+    applications, display manager, fonts and audio — so a desktop is one
+    choice rather than a list of parts to keep in step by hand.</p>
+    <table>
+      <tr><td><code>arctic-xfce</code></td><td>XFCE, foot, Thunar, notifyd, screenshooter, LightDM, X, PipeWire, fonts, Arctic theme</td></tr>
+      <tr><td><code>arctic-kde</code></td><td>Plasma, foot, Dolphin, Kate, Ark, Spectacle, Gwenview, Okular, SDDM with the Arctic theme, PipeWire, fonts</td></tr>
+      <tr><td><code>niri-dms</code></td><td>Niri, DankMaterialShell, foot, fuzzel, mako, swaylock, grim, slurp, XWayland, PipeWire, fonts, Firefox</td></tr>
+      <tr><td><code>apiwow-dwm</code></td><td>dwm, dmenu, st, picom, slstatus, slock, X, fonts</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Display managers</h2>
+    <pre class="code">A_DM=lightdm     # or sddm, greetd, none</pre>
+    <p>Left unset, the desktop picks its own — LightDM for XFCE, SDDM for
+    KDE. <code>none</code> means logging in on the console and starting the
+    session yourself.</p>
+  </section>
+
+  <section>
+    <h2>Audio</h2>
+    <pre class="code">A_AUDIO=yes</pre>
+    <p>Installs <code>arctic-sound</code>: PipeWire, WirePlumber, the
+    PulseAudio shim so anything expecting Pulse still plays, ALSA, and
+    <code>alsamixer</code> for setting levels directly. The service is
+    enabled at boot.</p>
+    <p>It can also be asked for as a package, which is the same thing:</p>
+    <pre class="code">SYS_PACKAGES="
+	arctic-sound
+"</pre>
+    <p>Desktop profiles already include the audio stack, so
+    <code>A_AUDIO</code> matters mainly on a console-only system or
+    alongside a window manager you assembled yourself.</p>
+  </section>
+
+  <section>
+    <h2>Bluetooth</h2>
+    <pre class="code">A_BLUETOOTH=yes</pre>
+    <p>bluez and the PipeWire bluetooth backend, with
+    <code>bluetoothd</code> enabled. Needs dbus, which is always on.</p>
+  </section>
+
+  <section>
+    <h2>Graphics</h2>
+    <pre class="code">A_GPU=auto     # or nvidia, nouveau, amd, intel, generic</pre>
+    <p><code>auto</code> reads the PCI bus and installs what is actually
+    there.</p>
+  </section>
+
+  <section>
+    <h2>Fonts</h2>
+    <pre class="code">A_FONTS="jetbrains-mono nerd-fonts-symbols noto noto-emoji"</pre>
+    <p>JetBrains Mono and the Nerd Font symbol set are on the ISO already, so
+    icons in a terminal work from the installer onward. The console gets
+    Arctic's palette at boot regardless of what is installed.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
+  </section>
+
+  <footer>
+    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+  </footer>
+</div>
+</body>
+</html>

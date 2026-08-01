@@ -21,48 +21,96 @@
   </header>
 
   <section>
-    <p>alpm is Arctic's own package manager. Binary packages are
-    <code>.alpmz</code> — a tar.xz with a <code>.PKGINFO</code>,
-    <code>.FILES</code>, an optional install script, and the payload rooted
-    at <code>/</code>.</p>
+    <h2>alpm</h2>
+    <p>Arctic's package manager. Binary packages are
+    <code>.alpmz</code> files — a tar.xz with a <code>.PKGINFO</code>, a
+    <code>.FILES</code> list and the payload rooted at <code>/</code>.</p>
+    <pre class="code">alpm ins vim              install
+alpm del vim              remove
+alpm del+deps vim         remove, and anything only it needed
+alpm search editor        search
+alpm info vim             what a package is
+alpm list                 what is installed
+alpm files vim            what a package owns
+alpm owns /usr/bin/vim    which package owns a file
+alpm fetch all            refresh the repository indexes
+alpm upgrade              upgrade everything</pre>
+    <p>On a configured system, prefer editing
+    <code>system.conf</code> and rebuilding — see
+    <a href="/configure.html">declarative configuration</a>. Using
+    <code>alpm ins</code> directly works, but the next rebuild will remove
+    anything the file does not mention.</p>
   </section>
 
   <section>
-    <h2>The basics</h2>
-    <pre class="code">alpm ins &lt;pkg&gt;              <span class="c"># install a binary package</span>
-alpm ins -s &lt;pkg&gt;           <span class="c"># build and install from source</span>
-alpm del &lt;pkg&gt;              <span class="c"># remove</span>
-alpm del+deps &lt;pkg&gt;         <span class="c"># remove, and now-orphaned dependencies too</span>
-alpm search &lt;term&gt;          <span class="c"># search name + description</span>
-alpm info &lt;pkg&gt;             <span class="c"># details</span>
-alpm list                   <span class="c"># everything installed</span>
-alpm update                 <span class="c"># upgrade everything</span></pre>
-    <p>Flags like <code>-y</code>/<code>--yes</code> work before or after
-    the subcommand — <code>alpm -y ins vim</code> and
-    <code>alpm ins vim -y</code> both work.</p>
+    <h2>Building from source</h2>
+    <p>Not everything has a binary. When it does not, alpm offers to build
+    it:</p>
+    <pre class="code">alpm ins -s some-package    build from the port, even if a binary exists
+alpm build recipe          build a recipe into an .alpmz</pre>
+    <p>On musl this is the normal path — see <a href="/musl.html">musl</a>.</p>
   </section>
 
   <section>
-    <h2>Undo</h2>
-    <pre class="code">alpm rollback           <span class="c"># undo the last transaction</span>
-alpm verify &lt;pkg&gt;       <span class="c"># check installed files against their recorded hashes</span>
-alpm doctor              <span class="c"># check the whole system for problems</span>
-alpm why &lt;pkg&gt;           <span class="c"># what pulled this in</span>
-alpm owns &lt;path&gt;         <span class="c"># which package owns this file</span></pre>
+    <h2>Repositories</h2>
+    <table>
+      <tr><td><code>main</code></td><td>the base system and its libraries</td></tr>
+      <tr><td><code>base</code></td><td>desktops, X, Wayland, larger stacks</td></tr>
+      <tr><td><code>extra</code></td><td>applications and tools</td></tr>
+      <tr><td><code>kernels</code></td><td>kernels and headers</td></tr>
+      <tr><td><code>profile</code></td><td>whole-environment meta packages</td></tr>
+      <tr><td><code>musl</code></td><td>packages built against musl</td></tr>
+      <tr><td><code>source</code></td><td>recipes for everything, binary or not</td></tr>
+      <tr><td><code>nonfree</code>, <code>multilib</code></td><td>off by default</td></tr>
+    </table>
+    <p>Configured in <code>/etc/alpm/repos.d/*.repo</code>:</p>
+    <pre class="code">name = main
+url = https://pkg-arctic.apiwow.net/ALL/main
+enabled = yes
+priority = 10</pre>
+    <p>Browse them at
+    <a href="https://pkg-arctic.apiwow.net">pkg-arctic.apiwow.net</a> and
+    <a href="https://ports-arctic.apiwow.net">ports-arctic.apiwow.net</a>.</p>
   </section>
 
   <section>
-    <h2>No binary yet?</h2>
-    <p>Not every one of the 500+ packages in
-    <a href="https://github.com/apiwo/arctic-linux-ports">arctic-linux-ports</a>
-    has a prebuilt binary on the <a href="https://pkg-arctic.apiwow.net">mirror</a>
-    yet. <code>alpm ins &lt;pkg&gt;</code> offers to compile it from source
-    automatically when there's no binary — same result, just slower the
-    first time.</p>
+    <h2>Snapshots and rollback</h2>
+    <p>On btrfs, alpm snapshots before every install or removal:</p>
+    <pre class="code">alpm log                  every transaction
+alpm rollback             undo the last one
+arctic snapshots          list them</pre>
+    <p>This is separate from generations, which record declared
+    configurations rather than filesystem state — see
+    <a href="/generations.html">generations</a>.</p>
+  </section>
+
+  <section>
+    <h2>Ports</h2>
+    <p>Every package is generated from one line in
+    <code>ports/manifest.tsv</code>:</p>
+    <pre class="code">repo  name  version  buildsys  license  depends  makedepends  url  source  desc</pre>
+    <p><code>gen-ports.py</code> turns that into a recipe. A package needing
+    something the template cannot express gets a hand-written recipe plus a
+    <code>recipe.local</code> marker beside it, which stops regeneration from
+    overwriting the hand work.</p>
+    <p>Changes go to
+    <a href="https://github.com/apiwo/arctic-linux-ports">arctic-linux-ports</a>.</p>
+  </section>
+
+  <section>
+    <h2>pkgit</h2>
+    <p>pkgit can be installed alongside alpm:</p>
+    <pre class="code">A_PKGIT=yes</pre>
+    <p>alpm remains what the system itself is built and managed with; this
+    only puts pkgit next to it.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
   </section>
 
   <footer>
-    <p><a href="/">&larr; all docs</a> — Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

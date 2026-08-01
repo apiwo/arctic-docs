@@ -21,41 +21,84 @@
   </header>
 
   <section>
-    <p>Arctic builds itself from source, every package included. The whole
-    pipeline runs sandboxed under bubblewrap — the host filesystem is
-    mounted read-only, only the build tree and /tmp are writable. That's
-    not a formality: a recipe that forgets <code>DESTDIR</code> once
-    installed glibc straight over a host's real <code>/usr/lib</code>. It
-    now just fails with EROFS instead of taking the machine down.</p>
-  </section>
-
-  <section>
-    <h2>Get the pieces</h2>
+    <h2>What you need</h2>
+    <p>A Linux host with a C toolchain, <code>cmake</code>,
+    <code>ninja</code>, <code>xorriso</code>, <code>mksquashfs</code>,
+    <code>bubblewrap</code>, and about 30 GiB free.</p>
     <pre class="code">git clone https://github.com/apiwo/arctic-linux
-git clone https://github.com/apiwo/arctic-linux-ports arctic-linux/ports</pre>
+git clone https://github.com/apiwo/arctic-linux-ports
+cd arctic-linux
+ln -s ../arctic-linux-ports ports</pre>
+    <p>The ports tree lives in its own repository, so the main one stays the
+    system rather than the system plus five hundred recipes.</p>
   </section>
 
   <section>
-    <h2>Build</h2>
-    <pre class="code">cd arctic-linux
-build/arctic-sandbox --check   <span class="c"># prove the sandbox actually holds</span>
-build/build.sh                  <span class="c"># the whole pipeline</span></pre>
-    <p>Or just one step:</p>
-    <pre class="code">build/build.sh iso</pre>
+    <h2>Building</h2>
+    <pre class="code">./build.sh                 everything
+./build.sh rootfs iso      only these steps</pre>
+    <p>Steps, in order: <code>fetch</code>, <code>kernel</code>,
+    <code>rootfs</code>, <code>usable</code>, <code>pkgs</code>,
+    <code>iso</code>. Each is idempotent — anything already built is skipped,
+    so a failed run can be fixed and re-run without starting over.</p>
+    <pre class="code">build/arctic-sandbox build/build-batch.sh vim nano</pre>
   </section>
 
   <section>
-    <h2>Building one package</h2>
-    <pre class="code">build/arctic-sandbox build/build-batch.sh &lt;pkg&gt;</pre>
-    <p>Recipes are generated from <code>ports/manifest.tsv</code> — edit
-    the manifest, not the recipe file, unless the package needs something
-    the generic template can't express, in which case drop a
-    <code>recipe.local</code> marker beside it so the generator leaves your
-    hand fix alone.</p>
+    <h2>Everything builds in a sandbox</h2>
+    <p>Not a convention — a rule the filesystem enforces. Every build runs
+    under bubblewrap with the entire host bound read-only; only the build
+    tree, the source tree and <code>/tmp</code> are writable.</p>
+    <pre class="code">build/arctic-sandbox --check</pre>
+    <p>This exists because it went wrong once. Arctic's glibc is configured
+    with <code>slibdir=/usr/lib</code>, so a recipe that forgets
+    <code>DESTDIR</code> writes that glibc straight into the host's
+    <code>/usr/lib</code> and every dynamically linked program on the machine
+    stops working. A note in a README was not good enough; the filesystem has
+    to refuse.</p>
+    <p>For musl packages use <code>arctic-musl-sandbox</code> instead — same
+    guarantee, plus a working musl toolchain. See
+    <a href="/musl.html">musl</a>.</p>
+  </section>
+
+  <section>
+    <h2>Testing</h2>
+    <pre class="code">build/arctic-qemu live        boot the ISO
+build/arctic-qemu live-uefi   through OVMF
+build/arctic-qemu install     with a blank disk attached
+build/arctic-qemu boot        boot what you installed
+build/arctic-qemu wipe        start over</pre>
+  </section>
+
+  <section>
+    <h2>The toolchain</h2>
+    <p>glibc cannot be compiled by clang — upstream requires GCC — so the
+    host's GCC is used as a stage-0 tool for glibc alone. Nothing it produces
+    beyond glibc is packaged.</p>
+    <p>One thing worth knowing if you write recipes: <code>alpm-build</code>
+    exports <code>pkgdir</code> but deliberately not <code>srcdir</code>.
+    <code>srcdir</code> is autoconf's own variable name, and exporting it put
+    a path autoconf never chose into every configure script — which broke any
+    package whose configure re-execs a nested one, silently and with no error
+    at all.</p>
+  </section>
+
+  <section>
+    <h2>Contributing</h2>
+    <p>Pull requests are welcome and are read before merging. Package changes
+    go through <code>ports/manifest.tsv</code> in
+    <a href="https://github.com/apiwo/arctic-linux-ports">arctic-linux-ports</a>,
+    not the main repository — recipes are generated from the manifest.</p>
+    <p>There is no logo yet. If you want to make one:
+    <code>CONTRIBUTING.md</code> says what is wanted.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a></p>
   </section>
 
   <footer>
-    <p><a href="/">&larr; all docs</a> — Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

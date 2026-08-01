@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kernels — Arctic Linux docs</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <div class="wrap" style="padding:0;">
+    <a href="/">docs</a>
+    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://ports-arctic.apiwow.net">ports</a>
+    <a href="https://github.com/apiwo/arctic-linux">github</a>
+  </div>
+</nav>
+<div class="wrap">
+  <header class="hero" style="padding:28px 0 8px;">
+    <h1 style="font-size:32px;">Kernels</h1>
+  </header>
+
+  <section>
+    <h2>Choosing one</h2>
+    <pre class="code">A_KERNEL=Arctic-base-kernel</pre>
+    <table>
+      <tr><td><code>Arctic-base-kernel</code></td>
+          <td>the default. Linux 7.1.3, broad hardware support, most drivers as modules.</td></tr>
+      <tr><td><code>Arctic-kernel</code></td>
+          <td>Linux 6.12 LTS with the ZEN patchset merged on top.</td></tr>
+      <tr><td><code>Arctic-libre-kernel</code></td>
+          <td>no binary blob loading, no nonfree microcode.</td></tr>
+      <tr><td><code>Arctic-small-kernel</code></td>
+          <td>monolithic, no module loader, no initramfs needed. Fast boot, fixed hardware.</td></tr>
+      <tr><td><code>Arctic-rt-kernel</code></td>
+          <td>realtime preemption.</td></tr>
+      <tr><td><code>Arctic-hardened-kernel</code></td>
+          <td>hardening options turned up.</td></tr>
+    </table>
+    <p>More than one can be installed at once; the bootloader lists each.</p>
+  </section>
+
+  <section>
+    <h2>Arctic-kernel</h2>
+    <p>A real fork, not a config change:
+    <a href="https://github.com/apiwo/arctic-kernel">github.com/apiwo/arctic-kernel</a>.
+    Linux 6.12 LTS with the
+    <a href="https://github.com/zen-kernel/zen-kernel">ZEN</a> patchset merged
+    on top, plus an Arctic patch of its own.</p>
+    <p>What ZEN brings:</p>
+    <ul>
+      <li>PDS and BMQ alternate schedulers</li>
+      <li>PCIe ACS override, for splitting IOMMU groups when passing a GPU through</li>
+      <li><code>ntsync</code> — Wine and Proton synchronisation primitives</li>
+      <li><code>vhba</code> — virtual SCSI host, for CD emulation</li>
+      <li>inlined futex fast paths, scheduler, TCP and cpufreq tuning</li>
+    </ul>
+    <p>The Arctic patch on top raises default readahead to 512 KiB.</p>
+    <p>The merge was reconciled by hand against 83 upstream point releases of
+    drift (6.12.17 to 6.12.100). What applied cleanly, what needed rework and
+    what was dropped is written down honestly in the repo's
+    <code>PATCHES.md</code> — including the one hunk that was dropped rather
+    than guessed at.</p>
+    <p>The kernel Arctic ships is built with the same configuration
+    <code>Arctic-base-kernel</code> uses, so the difference between them is
+    the patchset, not the options.</p>
+  </section>
+
+  <section>
+    <h2>The Arctic kernel configuration</h2>
+    <p>Both kernels start from the distribution config and apply the same
+    delta, for reasons worth knowing:</p>
+    <ul>
+      <li><strong>No BTF, no DWARF, no debuginfo.</strong> Across 4,800
+      modules that costs hours of build time and hundreds of megabytes on an
+      installer image.</li>
+      <li><strong>No module signing, no lockdown.</strong> Nothing is signed
+      at build time; alpm verifies packages instead.</li>
+      <li><strong>Storage and bus controllers built in, not modular.</strong>
+      SATA, NVMe, USB, virtio, SCSI. The initramfs has to reach the boot
+      medium before it can load a single module, so these cannot be modules
+      themselves.</li>
+      <li><strong>Filesystems built in.</strong> ext4, btrfs, xfs, vfat,
+      iso9660, squashfs, overlayfs — the live ISO mounts a squashfs under an
+      overlay before any module is available.</li>
+      <li><strong>Framebuffer and simpledrm built in</strong>, so there is a
+      console before graphics drivers load.</li>
+    </ul>
+    <p><code>Arctic-small-kernel</code> additionally disables the module
+    loader entirely: everything it can do, it does without modules, and it
+    needs no initramfs.</p>
+  </section>
+
+  <section>
+    <h2>Building a kernel yourself</h2>
+    <pre class="code">git clone https://github.com/apiwo/arctic-kernel
+cd arctic-kernel
+container/build.sh Default-config/config default bzImage modules</pre>
+    <p>The build runs inside bubblewrap: the host toolchain bound read-only,
+    no network, and the build's own output directory the only writable path.
+    No docker or podman needed.</p>
+    <p>Four configurations ship: <code>Default-config</code>,
+    <code>Hardened-config</code>, <code>Small-config</code>,
+    <code>RT-config</code>.</p>
+    <p>To build it as an Arctic package instead, with Arctic's own
+    configuration, see <a href="/building.html">building from source</a>.</p>
+  </section>
+
+  <section>
+    <h2>Microcode and firmware</h2>
+    <pre class="code">A_MICROCODE=auto     # or intel, amd, none</pre>
+    <p><code>auto</code> reads <code>/proc/cpuinfo</code> and installs
+    <code>intel-ucode</code> or <code>amd-ucode</code>. Firmware comes from
+    <code>linux-firmware</code>, which
+    <code>Arctic-libre-kernel</code> deliberately skips.</p>
+  </section>
+
+  <section>
+    <h2>Changing kernel later</h2>
+    <p>The kernel is a package like any other, so it is declared like one:</p>
+    <pre class="code">SYS_PACKAGES="
+	Arctic-kernel
+	...
+"</pre>
+    <pre class="code">arctic-rebuild</pre>
+    <p>Which means a kernel change is a generation, and a kernel that does
+    not boot is one boot-menu entry away from being undone. See
+    <a href="/generations.html">generations</a>.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
+  </section>
+
+  <footer>
+    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+  </footer>
+</div>
+</body>
+</html>

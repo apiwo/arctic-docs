@@ -1,4 +1,5 @@
 # arctic-docs
 
-Documentation site for Arctic Linux — install, declarative config, alpm,
-arctic-shell, musl, building from source.
+Documentation for Arctic Linux — install, declarative configuration,
+generations, init systems, kernels, packages, desktops, musl, and building
+from source.

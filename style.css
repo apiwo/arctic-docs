@@ -126,3 +126,18 @@ table.listing{width:100%;border-collapse:collapse;font-size:14px;}
 table.listing th{text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule);color:var(--fg-dim);font-weight:600;}
 table.listing td{padding:5px 10px;border-bottom:1px solid var(--rule);}
 table.listing tr:hover td{background:var(--bg-alt);}
+
+/* Docs additions: plain tables used as definition lists, subheadings, and
+   inline code inside prose. */
+section h3{font-family:Georgia,'Times New Roman',serif;font-style:italic;
+  font-size:18px;font-weight:400;margin:22px 0 8px;color:var(--fg);}
+section table{width:100%;border-collapse:collapse;font-size:14px;margin:12px 0 4px;}
+section table td{padding:7px 12px 7px 0;border-bottom:1px solid var(--rule);
+  vertical-align:top;}
+section table td:first-child{white-space:nowrap;width:1%;padding-right:20px;
+  color:var(--fg-dim);}
+section table tr:last-child td{border-bottom:none;}
+section code{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,
+  Consolas,monospace;font-size:0.9em;background:var(--bg-alt);
+  padding:1px 5px;border-radius:3px;}
+section table td:first-child code{background:none;padding:0;}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Declarative config — Arctic Linux docs</title>
+<title>Declarative configuration — Arctic Linux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -17,60 +17,120 @@
 </nav>
 <div class="wrap">
   <header class="hero" style="padding:28px 0 8px;">
-    <h1 style="font-size:32px;">Declarative config</h1>
+    <h1 style="font-size:32px;">Declarative configuration</h1>
   </header>
 
   <section>
-    <p>Arctic stays declarative after install too — the same relationship
-    NixOS's <code>configuration.nix</code> has to <code>nixos-rebuild
-    switch</code>, built on top of alpm rather than replacing it.</p>
+    <h2>The idea</h2>
+    <p>A file describes the machine. A command makes the machine match the
+    file. That is the whole model, and it is the same one NixOS uses —
+    built on top of an ordinary package manager rather than replacing it.</p>
+    <pre class="code">/etc/arctic/system.conf     what the machine is
+arctic-rebuild              make it so</pre>
+    <p>You do not <code>alpm ins</code> things onto a configured Arctic
+    system. You add a line and rebuild. The difference matters: the file
+    stays a complete, accurate description of the machine, which is what
+    makes rebuilding it elsewhere — or rolling it back — possible at all.</p>
   </section>
 
   <section>
-    <h2>system.conf + arctic-rebuild</h2>
-    <p><code>/etc/arctic/system.conf</code> lists every package and service
-    that should exist — not a list of things to add, the actual list.
-    Add a name and rebuild installs it; delete a name and rebuild removes it
-    (and anything that was only pulled in as its dependency).</p>
-    <pre class="code">vi /etc/arctic/system.conf
-arctic-rebuild</pre>
-    <p>First run, if the file is empty: nothing gets removed. It seeds
-    <code>SYS_PACKAGES</code>/<code>SYS_SERVICES</code> from whatever is
-    already installed and enabled, so you always start from a known-accurate
-    snapshot instead of an empty list that would delete everything.</p>
+    <h2>system.conf</h2>
     <pre class="code">SYS_PACKAGES="
 	git
 	tmux
 	ripgrep
+	neovim
 "
 
 SYS_SERVICES="
 	dbus
-	network
+	iwd
 	sshd
 "</pre>
-    <p>Every rebuild snapshots first if the root filesystem is btrfs (the
-    same mechanism alpm itself already uses before any install or removal),
-    so a rebuild that goes wrong is never a one-way trip.</p>
+    <p><strong>SYS_PACKAGES is the complete list</strong>, not a list of
+    things to add. Deleting a name removes that package on the next rebuild,
+    along with anything that was only installed as its dependency.</p>
+    <p>Only <em>explicitly</em> installed packages belong here. Dependencies
+    are alpm's business — listing them yourself is wrong and unnecessary.</p>
+    <p><strong>SYS_SERVICES</strong> is the same for what runs at boot.</p>
   </section>
 
   <section>
-    <h2>Rolling back</h2>
-    <pre class="code">arctic generations   <span class="c"># list snapshots</span>
-arctic rollback &lt;name&gt;</pre>
+    <h2>arctic-rebuild</h2>
+    <pre class="code">arctic-rebuild            make the system match the config
+arctic-rebuild --dry-run  show what would change, change nothing</pre>
+    <p>A rebuild diffs the file against reality and closes the gap:</p>
+    <pre class="code">:: recorded generation 4
+:: reconciling against /etc/arctic/system.conf
+  + install: ripgrep fd
+  - remove: tmux
+  + enable services: sshd
+:: now on generation 5
+:: rebuild complete</pre>
+    <p>Removals go through <code>alpm del+deps</code>, so orphaned
+    dependencies go too — while alpm's own protected-package list still
+    refuses to remove the base system no matter what the file says.</p>
   </section>
 
   <section>
-    <h2>Cleaning up</h2>
-    <p><code>arctic gc</code> prunes orphaned packages, old cached
-    <code>.alpmz</code> files, old snapshots beyond the retention count, and
-    any <code>arctic-shell</code> environment that hasn't been touched in a
-    week and wasn't built with <code>--keep</code>.</p>
-    <pre class="code">arctic gc</pre>
+    <h2>The first rebuild does not remove everything</h2>
+    <p>An empty <code>system.conf</code> read literally would mean "this
+    machine should have no packages". Instead, the first rebuild on a machine
+    where the file is empty <em>seeds</em> it from what is actually installed
+    and changes nothing. You get an accurate file to start editing from.</p>
+    <p>After an install this has already happened —
+    <code>arctic-strap</code> writes <code>system.conf</code> from the
+    install itself.</p>
+  </section>
+
+  <section>
+    <h2>Every rebuild is undoable</h2>
+    <p>A rebuild records a generation before it changes anything and another
+    after it succeeds. If an edit was wrong:</p>
+    <pre class="code">arctic rollback          go back one generation
+arctic rollback 3        go back to a specific one
+arctic diff 3 5          see what changed between two</pre>
+    <p>And if the result will not boot, the recent generations are in the
+    boot menu. See <a href="/generations.html">generations and
+    rollback</a>.</p>
+  </section>
+
+  <section>
+    <h2>Services</h2>
+    <p>Services are declared once, in <code>SYS_SERVICES</code>, regardless
+    of which init is running. Arctic's own service definitions live in
+    <code>/etc/rc.d</code> as a handful of variables, and are translated into
+    OpenRC scripts, runit run files, dinit services, s6 directories or
+    systemd units as needed — see <a href="/init.html">init systems</a>.</p>
+    <p>Directly, without editing the file:</p>
+    <pre class="code">service list
+service enable sshd
+service disable sshd
+service start sshd
+service status sshd</pre>
+    <p><code>service enable</code> and the config are the same thing —
+    enabling a service adds it to what the next rebuild considers correct
+    only if you also list it. If you enable something by hand and then
+    rebuild, the rebuild will turn it back off, because the file did not
+    mention it. That is the point of a declarative system, and it is worth
+    knowing before it surprises you.</p>
+  </section>
+
+  <section>
+    <h2>What is not declarative yet</h2>
+    <p>Honestly: <code>system.conf</code> covers packages and services.
+    Hostname, locale, timezone, users and the network are set at install time
+    from <code>install.conf</code> and are not currently reconciled by
+    <code>arctic-rebuild</code>. Changing them means editing the system
+    directly. That gap is known and is the next thing to close.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
   </section>
 
   <footer>
-    <p><a href="/">&larr; all docs</a> — Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

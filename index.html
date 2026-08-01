@@ -15,7 +15,6 @@
     <a href="https://github.com/apiwo/arctic-linux">github</a>
   </div>
 </nav>
-
 <div class="wrap">
   <header class="hero">
     <h1>Arctic Linux</h1>
@@ -27,16 +26,19 @@
       <p>Guides</p>
       <ul>
         <li><a href="/install.html">install</a></li>
-        <li><a href="/configure.html">declarative config</a></li>
+        <li><a href="/configure.html">declarative configuration</a></li>
+        <li><a href="/generations.html">generations and rollback</a></li>
+        <li><a href="/init.html">init systems</a></li>
+        <li><a href="/kernels.html">kernels</a></li>
         <li><a href="/packages.html">packages (alpm)</a></li>
-        <li><a href="/shell.html">arctic-shell</a></li>
+        <li><a href="/desktops.html">desktops and audio</a></li>
+        <li><a href="/shell.html">ephemeral shells</a></li>
         <li><a href="/musl.html">musl</a></li>
         <li><a href="/building.html">building from source</a></li>
       </ul>
     </div>
     <div class="art">
-      <pre>
-                   .xx
+      <pre>                   .xx
                    xxxx
                   xxxxxx
                  xxxxxxx
@@ -56,16 +58,50 @@
       xx+                    xxxxxx:
      xxx                      xxxxxx
     xxxx                      xxxxxxx
- xxxxxxxxx;:              :xxxxxxxxxxxxx:
-      </pre>
+ xxxxxxxxx;:              :xxxxxxxxxxxxx:</pre>
     </div>
   </div>
 
   <section>
-    <p>Arctic is installed and managed declaratively, the way NixOS is:
-    edit a config file, run one command, the system matches the file.
-    There are no interactive installer menus. Start with
-    <a href="/install.html">install</a>.</p>
+    <h2>What Arctic is</h2>
+    <p>Arctic is a Linux distribution built from source, managed declaratively.
+    The machine is described in a file; a command makes the machine match the
+    file. If an edit turns out to be wrong, you roll back to a numbered
+    generation — from the shell, or from the boot menu if it will not boot.</p>
+
+    <p>It is not a fork of anything. The package manager (<code>alpm</code>),
+    the installer, the init scripts and the ports tree were all written for
+    it. The kernel is a fork of Linux LTS with the ZEN patchset on top.</p>
+  </section>
+
+  <section>
+    <h2>The shape of it</h2>
+    <table>
+      <tr><td><code>/etc/arctic/install.conf</code></td>
+          <td>what to install, read once by <code>arctic-strap</code></td></tr>
+      <tr><td><code>/etc/arctic/system.conf</code></td>
+          <td>what the machine <em>is</em>, read by every <code>arctic-rebuild</code></td></tr>
+      <tr><td><code>alpm</code></td>
+          <td>packages: install, remove, build from source, snapshot, roll back</td></tr>
+      <tr><td><code>arctic-rebuild</code></td>
+          <td>make the system match <code>system.conf</code></td></tr>
+      <tr><td><code>arctic rollback</code></td>
+          <td>go back to an earlier generation</td></tr>
+      <tr><td><code>arctic-shell</code></td>
+          <td>a throwaway environment with packages in it, gone when you exit</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Start here</h2>
+    <p><a href="/install.html">Install</a> covers getting it onto a machine.
+    <a href="/configure.html">Declarative configuration</a> covers everything
+    after that, and is the part worth reading properly — it is what makes
+    Arctic different from an ordinary source distribution.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
   </section>
 
   <footer>

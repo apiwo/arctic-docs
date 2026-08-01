@@ -21,55 +21,80 @@
   </header>
 
   <section>
-    <p>Arctic is fundamentally a glibc distribution. musl exists as an
-    additional, opt-in library installed <strong>alongside</strong> glibc
-    at <code>/usr/musl</code> — not a separate system, not a replacement.
-    A full musl-based edition (everything rebuilt against musl, the way
-    Alpine is) is a much bigger undertaking than this is yet.</p>
+    <h2>What musl is on Arctic</h2>
+    <p>musl is an opt-in second libc installed at <code>/usr/musl</code>,
+    alongside glibc rather than instead of it. There is no separate musl
+    edition and no separate ISO — the same system can have both, and glibc
+    remains what the base system is built against.</p>
+    <pre class="code">alpm ins musl</pre>
   </section>
 
   <section>
-    <h2>What exists today</h2>
-    <ul>
-      <li><code>musl</code> — the library itself, plus the
-      <code>musl-gcc</code> wrapper for building things against it.</li>
-      <li>A dedicated <code>musl</code> repo for packages built against it
-      (see the <a href="https://pkg-arctic.apiwow.net">package mirror</a>).
-      Names get a <code>-musl</code> suffix when a glibc package of the same
-      name already exists — <code>busybox-musl</code> alongside the regular
-      <code>busybox</code> — since alpm's local database is keyed by name
-      regardless of repo.</li>
-    </ul>
+    <h2>Binaries are glibc</h2>
+    <p>Every binary package in the repositories is compiled against glibc.
+    Installing one on a musl-only basis will not work, and alpm says so
+    rather than letting it fail confusingly:</p>
+    <pre class="code">Musl libc can only use source pkgs on Arctic.
+Binaries are compiled via glibc.</pre>
+    <p>The way through is to build from source:</p>
+    <pre class="code">alpm ins -s some-package</pre>
   </section>
 
   <section>
-    <h2>Trying to install a binary package on a musl root</h2>
-    <p>Arctic's binary repo is always built against glibc, regardless of
-    which root alpm is pointed at. Installing one of those binaries onto a
-    musl root would fail at runtime with an unresolvable dynamic linker, so
-    alpm checks for this and falls back to building from source instead,
-    with a heads-up first.</p>
+    <h2>Package naming</h2>
+    <p>alpm's local database is keyed by package name globally, not per
+    repository, so a musl build of something that already exists takes a
+    <code>-musl</code> suffix — <code>busybox-musl</code> alongside
+    <code>busybox</code>. Packages with no glibc counterpart keep their plain
+    name.</p>
+    <p>The <code>musl</code> repository holds them.</p>
   </section>
 
   <section>
-    <h2>Building something against musl yourself</h2>
-    <pre class="code">alpm ins musl
-CC=/usr/musl/bin/musl-gcc &lt;your build command&gt;</pre>
-    <p>Two things musl packages here tend to need that glibc ones don't:</p>
-    <ul>
-      <li>Pass <code>CC=</code> on the actual build command line, not just
-      as an exported shell variable — a lot of Makefiles assign
-      <code>CC = gcc</code> themselves, which wins over a plain export.</li>
-      <li>musl folds <code>crypt()</code>/libm/librt straight into its
-      libc — there's no separate static lib for any of them, so a build
-      that unconditionally tries <code>-lcrypt -lm -lrt</code> under
-      <code>-static</code> can fail outright. Dynamic linking against
-      musl's own libc.so doesn't hit this.</li>
-    </ul>
+    <h2>Building musl packages</h2>
+    <pre class="code">build/arctic-musl-sandbox --check
+build/arctic-musl-sandbox build/build-batch.sh some-package</pre>
+    <p>This is the musl counterpart of <code>arctic-sandbox</code>: the same
+    read-only host, plus a real musl toolchain at <code>/usr/musl</code>
+    inside the sandbox with <code>CC</code> and <code>MUSLGCC</code> already
+    pointing at it.</p>
+    <p>It injects those paths with read-only overlays rather than a writable
+    tmpfs, so <code>/usr/lib</code> stays as read-only as it is under the
+    ordinary sandbox — a recipe that forgets <code>DESTDIR</code> still fails
+    closed.</p>
+  </section>
+
+  <section>
+    <h2>Two gotchas worth knowing</h2>
+    <p>Both of these were found the hard way and will bite anyone porting
+    something to musl:</p>
+    <p><strong>Exported <code>CC</code> is not always enough.</strong> A
+    Makefile with its own <code>CC = gcc</code> wins over the environment.
+    It has to go on the command line:</p>
+    <pre class="code">make CC="$MUSLGCC"</pre>
+    <p><strong><code>-static</code> often fails.</strong> musl folds
+    <code>crypt()</code>, libm and librt into libc itself, so there are no
+    separate <code>-lcrypt -lm -lrt</code> archives to find. A build that
+    probes for them unconditionally fails under <code>-static</code> and
+    works dynamically.</p>
+  </section>
+
+  <section>
+    <h2>Honest status</h2>
+    <p>musl on Arctic is real but young: musl itself and
+    <code>busybox-musl</code> build and package correctly, and the sandbox
+    for building more is in place. It is not a complete parallel system, and
+    <code>depend=</code> in a recipe is metadata — the build host is not
+    staged with a recipe's declared dependencies automatically, so a musl
+    port needing one currently stages it by hand.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/building.html">building from source</a></p>
   </section>
 
   <footer>
-    <p><a href="/">&larr; all docs</a> — Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

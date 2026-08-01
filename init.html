@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Init systems — Arctic Linux docs</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <div class="wrap" style="padding:0;">
+    <a href="/">docs</a>
+    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://ports-arctic.apiwow.net">ports</a>
+    <a href="https://github.com/apiwo/arctic-linux">github</a>
+  </div>
+</nav>
+<div class="wrap">
+  <header class="hero" style="padding:28px 0 8px;">
+    <h1 style="font-size:32px;">Init systems</h1>
+  </header>
+
+  <section>
+    <h2>Choosing one</h2>
+    <p>Set it at install time:</p>
+    <pre class="code">A_INIT=busybox</pre>
+    <table>
+      <tr><td><code>busybox</code></td><td>the default. busybox init, <code>/etc/rc.boot</code>, <code>/etc/rc.d</code> scripts. Nothing extra installed.</td></tr>
+      <tr><td><code>openrc</code></td><td>dependency-based, from Gentoo. <code>/etc/init.d</code>, <code>rc-update</code>.</td></tr>
+      <tr><td><code>sysvinit</code></td><td>the traditional one. <code>/etc/inittab</code>, <code>/etc/rc3.d</code>.</td></tr>
+      <tr><td><code>runit</code></td><td>tiny supervision. <code>/etc/sv</code>, <code>sv up</code>.</td></tr>
+      <tr><td><code>dinit</code></td><td>dependency handling without the size. <code>dinitctl</code>.</td></tr>
+      <tr><td><code>s6-66</code></td><td>s6 and s6-rc supervision with the 66 frontend.</td></tr>
+      <tr><td><code>systemd</code></td><td>units, journald, the suite.</td></tr>
+      <tr><td><code>systemd-libre</code></td><td>systemd with the nonfree firmware loading paths removed.</td></tr>
+    </table>
+    <p>Anything other than busybox is installed along with its supervision
+    tools, and gets <code>init=</code> on the kernel command line.</p>
+  </section>
+
+  <section>
+    <h2>Services are declared once</h2>
+    <p>Arctic defines a service in <code>/etc/rc.d</code> as a few
+    variables:</p>
+    <pre class="code">#!/bin/sh
+NAME=iwd
+CMD=/usr/bin/iwd
+ARGS=""
+BACKGROUND=yes
+
+. /etc/arctic/svc.lib
+svc_main "$@"</pre>
+    <p>That is the only definition. <code>arctic-init-setup</code> translates
+    it into whatever the running init expects — an OpenRC
+    <code>init.d</code> script, a runit <code>run</code> file, a dinit
+    service file, an s6 service directory, a systemd unit.</p>
+    <p>Shipping one definition and generating the rest means adding a service
+    to Arctic is one file, and no init quietly drifts out of step with the
+    others.</p>
+    <pre class="code">arctic-init-setup openrc              regenerate for OpenRC
+arctic-init-setup runit --root /mnt   or into a target</pre>
+    <p>A rebuild that changes the enabled set regenerates them automatically
+    for whichever init the machine runs.</p>
+  </section>
+
+  <section>
+    <h2>What translation actually does</h2>
+    <p>Daemons and one-shots are different, and the translation knows the
+    difference. A service with a <code>CMD</code> becomes a supervised
+    process; one without — <code>network</code>, <code>nftables</code>,
+    <code>fstrim</code> — becomes a one-shot that calls the
+    <code>rc.d</code> script's own start and stop.</p>
+    <p>That distinction matters per init. Under runit a one-shot cannot be a
+    supervised service at all — it would exit immediately and be restarted
+    forever — so those go into runit's stage-1 boot script instead. Under
+    dinit they become <code>type = scripted</code>; under systemd,
+    <code>Type=oneshot</code> with <code>RemainAfterExit</code>.</p>
+    <p>Daemons that would fork are told to stay in the foreground when the
+    init supervises them: <code>dbus-daemon --nofork</code>,
+    <code>sshd -D</code>, <code>crond -f</code>.</p>
+  </section>
+
+  <section>
+    <h2>Where things land</h2>
+    <table>
+      <tr><td>busybox</td><td><code>/etc/rc.d</code>, enabled via <code>/etc/arctic/services</code></td></tr>
+      <tr><td>openrc</td><td><code>/etc/init.d</code>, <code>/etc/runlevels/default</code></td></tr>
+      <tr><td>sysvinit</td><td><code>/etc/init.d</code>, <code>/etc/rc3.d</code>, <code>/etc/rc5.d</code></td></tr>
+      <tr><td>runit</td><td><code>/etc/sv</code>, <code>/etc/runit/runsvdir/default</code>, stages in <code>/etc/runit/1</code>–<code>3</code></td></tr>
+      <tr><td>dinit</td><td><code>/etc/dinit.d</code>, <code>/etc/dinit.d/boot.d</code></td></tr>
+      <tr><td>s6-66</td><td><code>/etc/s6/sv</code>, <code>/etc/66/service</code></td></tr>
+      <tr><td>systemd</td><td><code>/etc/systemd/system</code></td></tr>
+    </table>
+    <p>s6 needs its database compiled on the target once installed:</p>
+    <pre class="code">s6-rc-compile /etc/s6/rc/compiled /etc/s6/sv</pre>
+  </section>
+
+  <section>
+    <h2>Honest status</h2>
+    <p>busybox init is what Arctic is built around, is what every service
+    script is written against, and is the only one that has been through a
+    full install-and-boot on real hardware. The others generate correct
+    definitions and install their packages, but they have had far less use.
+    If you are installing Arctic for the first time, use the default.</p>
+    <p>systemd in particular is a large dependency chain that Arctic does not
+    yet build in full. If the package is unavailable the installer says so
+    and falls back to busybox init rather than producing a machine that
+    cannot boot.</p>
+  </section>
+
+  <section>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a></p>
+  </section>
+
+  <footer>
+    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+  </footer>
+</div>
+</body>
+</html>
