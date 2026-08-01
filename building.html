@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building from source — Arctic Linux docs</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <div class="wrap" style="padding:0;">
+    <a href="/">docs</a>
+    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://ports-arctic.apiwow.net">ports</a>
+    <a href="https://github.com/apiwo/arctic-linux">github</a>
+  </div>
+</nav>
+<div class="wrap">
+  <header class="hero" style="padding:28px 0 8px;">
+    <h1 style="font-size:32px;">Building from source</h1>
+  </header>
+
+  <section>
+    <p>Arctic builds itself from source, every package included. The whole
+    pipeline runs sandboxed under bubblewrap — the host filesystem is
+    mounted read-only, only the build tree and /tmp are writable. That's
+    not a formality: a recipe that forgets <code>DESTDIR</code> once
+    installed glibc straight over a host's real <code>/usr/lib</code>. It
+    now just fails with EROFS instead of taking the machine down.</p>
+  </section>
+
+  <section>
+    <h2>Get the pieces</h2>
+    <pre class="code">git clone https://github.com/apiwo/arctic-linux
+git clone https://github.com/apiwo/arctic-linux-ports arctic-linux/ports</pre>
+  </section>
+
+  <section>
+    <h2>Build</h2>
+    <pre class="code">cd arctic-linux
+build/arctic-sandbox --check   <span class="c"># prove the sandbox actually holds</span>
+build/build.sh                  <span class="c"># the whole pipeline</span></pre>
+    <p>Or just one step:</p>
+    <pre class="code">build/build.sh iso</pre>
+  </section>
+
+  <section>
+    <h2>Building one package</h2>
+    <pre class="code">build/arctic-sandbox build/build-batch.sh &lt;pkg&gt;</pre>
+    <p>Recipes are generated from <code>ports/manifest.tsv</code> — edit
+    the manifest, not the recipe file, unless the package needs something
+    the generic template can't express, in which case drop a
+    <code>recipe.local</code> marker beside it so the generator leaves your
+    hand fix alone.</p>
+  </section>
+
+  <footer>
+    <p><a href="/">&larr; all docs</a> — Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+  </footer>
+</div>
+</body>
+</html>

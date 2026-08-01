@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>arctic-shell — Arctic Linux docs</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <div class="wrap" style="padding:0;">
+    <a href="/">docs</a>
+    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://ports-arctic.apiwow.net">ports</a>
+    <a href="https://github.com/apiwo/arctic-linux">github</a>
+  </div>
+</nav>
+<div class="wrap">
+  <header class="hero" style="padding:28px 0 8px;">
+    <h1 style="font-size:32px;">arctic-shell</h1>
+  </header>
+
+  <section>
+    <p>An ephemeral, reproducible package environment — the same idea as
+    <code>nix-shell</code>/<code>guix shell</code>, built on alpm.</p>
+  </section>
+
+  <section>
+    <h2>Usage</h2>
+    <pre class="code">arctic-shell &lt;pkgs&gt;...                  <span class="c"># drop into an interactive shell</span>
+arctic-shell &lt;pkgs&gt;... -- &lt;cmd&gt;...      <span class="c"># run it, tear the environment down after</span>
+arctic-shell &lt;pkgs&gt;... -  &lt;cmd&gt;...      <span class="c"># run it, stay in the shell after</span>
+arctic-shell --keep &lt;pkgs&gt;...           <span class="c"># leave the environment on disk for next time</span>
+arctic-shell --network &lt;pkgs&gt;...        <span class="c"># give it a real network connection</span></pre>
+    <pre class="code">arctic-shell clang -- clang file.c
+arctic-shell --keep rust cargo</pre>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <p>Builds a scratch root with exactly the named packages installed
+    (plus the minimal glibc/busybox/toybox base every root needs to have a
+    working shell at all), then chroots into it with your current directory
+    available at the same path, so local files are right there. Without
+    <code>--network</code> the environment has no network access at all — a
+    separate network namespace, not just a missing route.</p>
+    <p>Environments are content-addressed: asking for the same package set
+    again reuses whatever was already built for it, at
+    <code>/var/cache/arctic-shell/&lt;hash&gt;</code>.</p>
+  </section>
+
+  <footer>
+    <p><a href="/">&larr; all docs</a> — Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+  </footer>
+</div>
+</body>
+</html>

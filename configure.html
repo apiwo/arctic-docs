@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Declarative config — Arctic Linux docs</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <div class="wrap" style="padding:0;">
+    <a href="/">docs</a>
+    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://ports-arctic.apiwow.net">ports</a>
+    <a href="https://github.com/apiwo/arctic-linux">github</a>
+  </div>
+</nav>
+<div class="wrap">
+  <header class="hero" style="padding:28px 0 8px;">
+    <h1 style="font-size:32px;">Declarative config</h1>
+  </header>
+
+  <section>
+    <p>Arctic stays declarative after install too — the same relationship
+    NixOS's <code>configuration.nix</code> has to <code>nixos-rebuild
+    switch</code>, built on top of alpm rather than replacing it.</p>
+  </section>
+
+  <section>
+    <h2>system.conf + arctic-rebuild</h2>
+    <p><code>/etc/arctic/system.conf</code> lists every package and service
+    that should exist — not a list of things to add, the actual list.
+    Add a name and rebuild installs it; delete a name and rebuild removes it
+    (and anything that was only pulled in as its dependency).</p>
+    <pre class="code">vi /etc/arctic/system.conf
+arctic-rebuild</pre>
+    <p>First run, if the file is empty: nothing gets removed. It seeds
+    <code>SYS_PACKAGES</code>/<code>SYS_SERVICES</code> from whatever is
+    already installed and enabled, so you always start from a known-accurate
+    snapshot instead of an empty list that would delete everything.</p>
+    <pre class="code">SYS_PACKAGES="
+	git
+	tmux
+	ripgrep
+"
+
+SYS_SERVICES="
+	dbus
+	network
+	sshd
+"</pre>
+    <p>Every rebuild snapshots first if the root filesystem is btrfs (the
+    same mechanism alpm itself already uses before any install or removal),
+    so a rebuild that goes wrong is never a one-way trip.</p>
+  </section>
+
+  <section>
+    <h2>Rolling back</h2>
+    <pre class="code">arctic generations   <span class="c"># list snapshots</span>
+arctic rollback &lt;name&gt;</pre>
+  </section>
+
+  <section>
+    <h2>Cleaning up</h2>
+    <p><code>arctic gc</code> prunes orphaned packages, old cached
+    <code>.alpmz</code> files, old snapshots beyond the retention count, and
+    any <code>arctic-shell</code> environment that hasn't been touched in a
+    week and wasn't built with <code>--keep</code>.</p>
+    <pre class="code">arctic gc</pre>
+  </section>
+
+  <footer>
+    <p><a href="/">&larr; all docs</a> — Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+  </footer>
+</div>
+</body>
+</html>

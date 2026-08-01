@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Packages (alpm) — Arctic Linux docs</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <div class="wrap" style="padding:0;">
+    <a href="/">docs</a>
+    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://ports-arctic.apiwow.net">ports</a>
+    <a href="https://github.com/apiwo/arctic-linux">github</a>
+  </div>
+</nav>
+<div class="wrap">
+  <header class="hero" style="padding:28px 0 8px;">
+    <h1 style="font-size:32px;">Packages (alpm)</h1>
+  </header>
+
+  <section>
+    <p>alpm is Arctic's own package manager. Binary packages are
+    <code>.alpmz</code> — a tar.xz with a <code>.PKGINFO</code>,
+    <code>.FILES</code>, an optional install script, and the payload rooted
+    at <code>/</code>.</p>
+  </section>
+
+  <section>
+    <h2>The basics</h2>
+    <pre class="code">alpm ins &lt;pkg&gt;              <span class="c"># install a binary package</span>
+alpm ins -s &lt;pkg&gt;           <span class="c"># build and install from source</span>
+alpm del &lt;pkg&gt;              <span class="c"># remove</span>
+alpm del+deps &lt;pkg&gt;         <span class="c"># remove, and now-orphaned dependencies too</span>
+alpm search &lt;term&gt;          <span class="c"># search name + description</span>
+alpm info &lt;pkg&gt;             <span class="c"># details</span>
+alpm list                   <span class="c"># everything installed</span>
+alpm update                 <span class="c"># upgrade everything</span></pre>
+    <p>Flags like <code>-y</code>/<code>--yes</code> work before or after
+    the subcommand — <code>alpm -y ins vim</code> and
+    <code>alpm ins vim -y</code> both work.</p>
+  </section>
+
+  <section>
+    <h2>Undo</h2>
+    <pre class="code">alpm rollback           <span class="c"># undo the last transaction</span>
+alpm verify &lt;pkg&gt;       <span class="c"># check installed files against their recorded hashes</span>
+alpm doctor              <span class="c"># check the whole system for problems</span>
+alpm why &lt;pkg&gt;           <span class="c"># what pulled this in</span>
+alpm owns &lt;path&gt;         <span class="c"># which package owns this file</span></pre>
+  </section>
+
+  <section>
+    <h2>No binary yet?</h2>
+    <p>Not every one of the 500+ packages in
+    <a href="https://github.com/apiwo/arctic-linux-ports">arctic-linux-ports</a>
+    has a prebuilt binary on the <a href="https://pkg-arctic.apiwow.net">mirror</a>
+    yet. <code>alpm ins &lt;pkg&gt;</code> offers to compile it from source
+    automatically when there's no binary — same result, just slower the
+    first time.</p>
+  </section>
+
+  <footer>
+    <p><a href="/">&larr; all docs</a> — Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+  </footer>
+</div>
+</body>
+</html>

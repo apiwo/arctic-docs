@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>musl — Arctic Linux docs</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <div class="wrap" style="padding:0;">
+    <a href="/">docs</a>
+    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://ports-arctic.apiwow.net">ports</a>
+    <a href="https://github.com/apiwo/arctic-linux">github</a>
+  </div>
+</nav>
+<div class="wrap">
+  <header class="hero" style="padding:28px 0 8px;">
+    <h1 style="font-size:32px;">musl</h1>
+  </header>
+
+  <section>
+    <p>Arctic is fundamentally a glibc distribution. musl exists as an
+    additional, opt-in library installed <strong>alongside</strong> glibc
+    at <code>/usr/musl</code> — not a separate system, not a replacement.
+    A full musl-based edition (everything rebuilt against musl, the way
+    Alpine is) is a much bigger undertaking than this is yet.</p>
+  </section>
+
+  <section>
+    <h2>What exists today</h2>
+    <ul>
+      <li><code>musl</code> — the library itself, plus the
+      <code>musl-gcc</code> wrapper for building things against it.</li>
+      <li>A dedicated <code>musl</code> repo for packages built against it
+      (see the <a href="https://pkg-arctic.apiwow.net">package mirror</a>).
+      Names get a <code>-musl</code> suffix when a glibc package of the same
+      name already exists — <code>busybox-musl</code> alongside the regular
+      <code>busybox</code> — since alpm's local database is keyed by name
+      regardless of repo.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Trying to install a binary package on a musl root</h2>
+    <p>Arctic's binary repo is always built against glibc, regardless of
+    which root alpm is pointed at. Installing one of those binaries onto a
+    musl root would fail at runtime with an unresolvable dynamic linker, so
+    alpm checks for this and falls back to building from source instead,
+    with a heads-up first.</p>
+  </section>
+
+  <section>
+    <h2>Building something against musl yourself</h2>
+    <pre class="code">alpm ins musl
+CC=/usr/musl/bin/musl-gcc &lt;your build command&gt;</pre>
+    <p>Two things musl packages here tend to need that glibc ones don't:</p>
+    <ul>
+      <li>Pass <code>CC=</code> on the actual build command line, not just
+      as an exported shell variable — a lot of Makefiles assign
+      <code>CC = gcc</code> themselves, which wins over a plain export.</li>
+      <li>musl folds <code>crypt()</code>/libm/librt straight into its
+      libc — there's no separate static lib for any of them, so a build
+      that unconditionally tries <code>-lcrypt -lm -lrt</code> under
+      <code>-static</code> can fail outright. Dynamic linking against
+      musl's own libc.so doesn't hit this.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p><a href="/">&larr; all docs</a> — Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+  </footer>
+</div>
+</body>
+</html>

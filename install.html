@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install — Arctic Linux docs</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <div class="wrap" style="padding:0;">
+    <a href="/">docs</a>
+    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://ports-arctic.apiwow.net">ports</a>
+    <a href="https://github.com/apiwo/arctic-linux">github</a>
+  </div>
+</nav>
+<div class="wrap">
+  <header class="hero" style="padding:28px 0 8px;">
+    <h1 style="font-size:32px;">Install</h1>
+  </header>
+
+  <section>
+    <h2>The whole thing, one command</h2>
+    <p>Boot the ISO. Get online if you need to (wired is automatic):</p>
+    <pre class="code">iwctl station wlan0 connect YOUR-NETWORK</pre>
+    <p>Edit the config, then run <code>arctic-strap</code>:</p>
+    <pre class="code">vi /etc/arctic/install.conf
+arctic-strap</pre>
+    <p>Everything in <code>install.conf</code> ships commented out, with the
+    default arctic-strap uses right next to it. Uncomment what you want
+    different. The one setting that changes what "run the install" means is
+    <code>A_DISK</code>:</p>
+    <ul>
+      <li><strong>Left commented out</strong> — manual path. Partition and
+      mount a target yourself first (<code>cfdisk</code>, <code>mkfs.ext4</code>,
+      <code>mkfs.vfat</code> are all on the image), then
+      <code>arctic-strap /mnt</code>.</li>
+      <li><strong>Set to a disk</strong> (<code>A_DISK=/dev/sda</code>) —
+      arctic-strap partitions that whole disk, formats it, mounts it,
+      installs the base system, and installs the bootloader. Whatever was on
+      the disk is gone once you run it.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Common settings</h2>
+    <pre class="code">A_DESKTOP=niri
+A_USER=you
+A_USERPASS=change-me
+A_ENCRYPT=yes
+A_ENCRYPT_PASS=change-me
+A_EXTRA=git tmux ripgrep</pre>
+    <p>Full list of every setting, with what it defaults to, is in the
+    config file's own comments — that file is the reference, this page
+    isn't trying to duplicate it.</p>
+  </section>
+
+  <section>
+    <h2>Bootloader on its own</h2>
+    <p>If you used the manual path, install the bootloader separately.
+    The path tells arctic-boot-strap EFI vs BIOS by itself —
+    <code>/mnt/boot/efi</code> means UEFI, anything else means BIOS:</p>
+    <pre class="code">mount /dev/nvme0n1p2 /mnt/boot/efi
+arctic-boot-strap /mnt/boot/efi</pre>
+  </section>
+
+  <footer>
+    <p><a href="/">&larr; all docs</a> — Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+  </footer>
+</div>
+</body>
+</html>
