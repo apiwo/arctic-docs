@@ -97,7 +97,7 @@ arctic-rebuild --dry-run  show what would change, change nothing</pre>
     accurate starting file to edit from, rather than a destructive first
     surprise.</p>
     <p>After an install this has already happened once —
-    <code>arctic-strap</code> writes <code>system.conf</code> from the
+    <code>arctic-install</code> writes <code>system.conf</code> from the
     install itself, so the seeding behaviour mainly matters for a machine
     that predates the declarative layer, or one where the file was deleted
     by hand.</p>
@@ -123,10 +123,10 @@ arctic diff 3 5          see exactly what changed between two</pre>
     <p>Services are declared once, in <code>SYS_SERVICES</code>, regardless
     of which init is actually running on the machine. Arctic's own service
     definitions live in <code>/etc/rc.d</code> as a handful of shell
-    variables per service, and are translated into OpenRC scripts, runit run
-    files, dinit service files, s6 service directories or systemd units as
-    needed — see <a href="/init.html">init systems</a> for exactly how that
-    translation works and what it does and does not cover yet.</p>
+    variables per service, and are translated into OpenRC scripts, sysvinit
+    entries, runit run files or dinit service files as needed — see
+    <a href="/init.html">init systems</a> for exactly how that translation
+    works and what it does and does not cover yet.</p>
     <p>Directly, without editing the file — useful for a quick one-off
     change or for checking current state:</p>
     <pre class="code">service list
