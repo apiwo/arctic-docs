@@ -24,11 +24,15 @@
     <h2>Modes</h2>
     <pre class="code">A_NET=offline     # or dhcp, wifi, static</pre>
     <table>
-      <tr><td><code>offline</code></td><td>nothing configured; you set it up after boot</td></tr>
-      <tr><td><code>dhcp</code></td><td>DHCP on whichever wired interface comes up — the default on the live ISO</td></tr>
-      <tr><td><code>wifi</code></td><td>wireless via iwd, using the credentials given below</td></tr>
+      <tr><td><code>offline</code></td><td>nothing explicitly configured - NetworkManager still auto-configures a wired link itself if one comes up</td></tr>
+      <tr><td><code>dhcp</code></td><td>DHCP on whichever wired interface comes up</td></tr>
+      <tr><td><code>wifi</code></td><td>wireless via NetworkManager, using the credentials given below</td></tr>
       <tr><td><code>static</code></td><td>a fixed address, gateway and DNS servers you specify</td></tr>
     </table>
+    <p>NetworkManager + nmtui is the installed system's whole networking
+    story - DHCP, static config and wifi (through wpa_supplicant as its
+    backend) all go through it, replacing what used to be an iwd/dhcpcd
+    split between wireless and wired.</p>
   </section>
 
   <section>
@@ -37,22 +41,24 @@
 A_WIFI_SSID=your-network
 A_WIFI_PSK=your-password
 A_WIFI_IFACE=wlan0</pre>
-    <p><code>A_WIFI_IFACE</code> can be left unset — the installer picks
+    <p><code>A_WIFI_IFACE</code> can be left unset - the installer picks
     whichever wireless interface actually exists rather than requiring you
     to know its kernel-assigned name in advance, which is not always stable
     across boots or hardware.</p>
-    <p>Setting <code>A_WIFI_SSID</code> at all enables the <code>iwd</code>
-    service at boot, even if <code>A_NET</code> is set to something other
-    than <code>wifi</code> — iwd is what <code>iwctl</code> talks to, and
-    there is no reason to leave it disabled if wireless credentials were
-    configured at all.</p>
-    <p>Interactively, from a live session or after install, the same thing
-    without touching the config:</p>
-    <pre class="code">iwctl
-[iwd]# device list
-[iwd]# station wlan0 scan
-[iwd]# station wlan0 get-networks
-[iwd]# station wlan0 connect YOUR-NETWORK</pre>
+    <p><code>arctic-install</code> writes what you give it straight into a
+    NetworkManager keyfile connection at
+    <code>/etc/NetworkManager/system-connections/arctic-wifi.nmconnection</code>
+    (mode 600 - the PSK sits in it in plain text, same as any NetworkManager
+    keyfile), so it's already there and set to auto-connect the first time
+    the installed system boots.</p>
+    <p>Interactively, from the installed system, the same thing without
+    touching the config - <code>doas</code> because changing a system
+    connection needs root when polkit isn't installed (it isn't, on
+    purpose - see <a href="/reference.html">reference</a>):</p>
+    <pre class="code">doas nmtui</pre>
+    <p>Pick "Activate a connection", choose the network, enter the
+    passphrase. <code>nmcli device wifi connect SSID password PSK</code>
+    does the same thing non-interactively, for a script.</p>
   </section>
 
   <section>
@@ -63,28 +69,46 @@ A_GATEWAY=192.168.1.1
 A_DNS="1.1.1.1 9.9.9.9"</pre>
     <p><code>A_IP</code> takes CIDR notation directly rather than a
     separate netmask field. <code>A_DNS</code> accepts more than one
-    resolver, space separated, written into <code>/etc/resolv.conf</code>
-    in the order given.</p>
+    resolver, space separated. This becomes an
+    <code>ipv4.method=manual</code> NetworkManager keyfile connection, not a
+    hand-written <code>/etc/resolv.conf</code> - NetworkManager owns that
+    file once it's running and regenerates it from whichever connection is
+    active.</p>
   </section>
 
   <section>
-    <h2>dhcpcd</h2>
-    <p>dhcpcd is on the live ISO and is what wired DHCP actually runs
-    through, both during the live session and, if <code>A_NET=dhcp</code>,
-    on the installed system afterward. It lives in
-    <code>/usr/sbin</code>, which is on <code>root</code>'s
-    <code>PATH</code> by default (<code>/usr/local/sbin:/usr/local/bin:
-    /usr/sbin:/usr/bin:/sbin:/bin</code>) — a merged-<code>/usr</code>
-    system does not distinguish <code>/sbin</code> from <code>/bin</code>
-    the way older layouts did, but the historical split between "user"
-    and "superuser" binaries in <code>PATH</code> for root specifically is
-    kept for familiarity.</p>
+    <h2>The live/installer image's wireless is different, on purpose</h2>
+    <p>The live ISO does <em>not</em> carry NetworkManager - it's a much
+    bigger dependency tree (glib, meson, wpa_supplicant, newt for nmtui)
+    than is worth hand-building into the earliest bootstrap stage just for
+    an installer that runs once. Wired DHCP still comes up on its own on the
+    live image (a small, live-only rc.d/network service - not the same
+    thing as the installed system's networking, and installed systems never
+    enable it). Wireless is manual there:</p>
+    <pre class="code">wifi-connect your-network your-password</pre>
+    <p>This drives wpa_supplicant directly (WPA2-Personal only - no
+    802.1X/enterprise on the live image, that needs a TLS backend that
+    isn't built this early) and requests a DHCP lease once associated.
+    Once you've installed and rebooted into the real system, that's where
+    NetworkManager/nmtui takes over and the config above applies.</p>
+  </section>
+
+  <section>
+    <h2>MAC randomisation</h2>
+    <pre class="code">A_MAC_RANDOMIZE=n</pre>
+    <p>Set to <code>y</code> and NetworkManager presents a MAC address
+    derived from the network (stable per-SSID, not traceable back to the
+    adapter's real one) instead of broadcasting the hardware address every
+    time it associates. Written as a global default in
+    <code>/etc/NetworkManager/conf.d/mac-randomization.conf</code>, applying
+    to every connection rather than just the one <code>A_WIFI_SSID</code>
+    configures.</p>
   </section>
 
   <section>
     <h2>The firewall</h2>
-    <pre class="code">A_FIREWALL=yes</pre>
-    <p>Installs and enables nftables with a default-deny inbound policy —
+    <pre class="code">A_FIREWALL=y</pre>
+    <p>Installs and enables nftables with a default-deny inbound policy -
     established and related connections and loopback traffic are allowed,
     everything else inbound is dropped unless something else you installed
     (sshd, for instance) opens a hole for itself explicitly.</p>
@@ -92,31 +116,33 @@ A_DNS="1.1.1.1 9.9.9.9"</pre>
 
   <section>
     <h2>SSH</h2>
-    <pre class="code">A_SSH=yes
-A_SSH_PASSWORD_AUTH=yes    # set to no to require keys only
-A_SSH_KEYS=""              # public keys to seed into the new user's authorized_keys</pre>
+    <pre class="code">A_SSH=y
+A_SSH_PASSWORD_AUTH=y    # set to n to require keys only
+A_SSH_KEYS=""            # public keys to seed into the new user's authorized_keys</pre>
     <p>Enabling SSH also opens the corresponding hole in the firewall
-    automatically when <code>A_FIREWALL=yes</code>, rather than leaving you
+    automatically when <code>A_FIREWALL=y</code>, rather than leaving you
     to notice the two settings need to agree with each other.</p>
   </section>
 
   <section>
-    <h2>Why dbus and iwd used to fail</h2>
+    <h2>Why dbus used to fail</h2>
     <p>This is worth knowing even if you never hit it directly, because it
-    shaped how service startup logging works today. <code>iwctl</code> used
-    to report <code>failed to initialize dbus</code> even when
-    <code>dbus-daemon</code> was running correctly — the actual causes were
-    three unrelated things, described in full with the real error output at
-    each stage in <a href="/troubleshooting.html">troubleshooting</a>. The
-    short version: <code>/var/run</code> did not exist (iwd's underlying
-    D-Bus library looks there; dbus itself listens under
-    <code>/run</code>), the <code>netdev</code> group iwd's own D-Bus policy
-    references did not exist (dbus silently rejects a policy naming an
-    unresolvable group), and no machine ID had ever been generated (which
-    <code>dbus-daemon --system</code> requires to start at all). None of the
-    three produced an error anyone could see at the time, which is a large
-    part of why it took real boot-log instrumentation, not guessing, to find
-    them.</p>
+    shaped how service startup logging works today - the exact same failure
+    mode now applies to NetworkManager instead of the iwd it originally
+    happened with, since both register themselves on the system bus the
+    same way at startup. The short version, described in full with the
+    real error output at each stage in
+    <a href="/troubleshooting.html">troubleshooting</a>:
+    <code>/var/run</code> did not exist (ell - the library both iwd and
+    bluez are built on - looks there; dbus itself listens under
+    <code>/run</code>), the <code>netdev</code> group iwd's D-Bus policy
+    referenced did not exist (dbus silently rejects a policy naming an
+    unresolvable group - NetworkManager's own policy references the same
+    group now), and no machine ID had ever been generated (which
+    <code>dbus-daemon --system</code> requires to start at all). None of
+    the three produced an error anyone could see at the time, which is a
+    large part of why it took real boot-log instrumentation, not guessing,
+    to find them.</p>
   </section>
 
   <section>

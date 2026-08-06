@@ -37,43 +37,48 @@ cat /var/log/boot.log     # from a previous boot</pre>
     context. The log now records, for every service: that it was
     considered, whether it started, and if not, its actual stderr output —
     which is what made it possible to find the three separate causes behind
-    the iwd/dbus failure below in the first place, rather than continuing to
+    the dbus failure below in the first place, rather than continuing to
     guess.</p>
   </section>
 
   <section>
-    <h2>"failed to initialize dbus" from iwctl or iwd</h2>
-    <p>This looked like a single dbus problem and was actually three
-    unrelated ones, found one at a time by adding boot logging and reading
-    what it said instead of guessing further:</p>
+    <h2>"failed to initialize dbus" from a D-Bus service</h2>
+    <p>This first showed up as <code>iwctl</code> reporting <code>failed to
+    initialize dbus</code>, back when iwd was the wireless daemon (it's
+    since been replaced outright by NetworkManager + nmtui - see
+    <a href="/networking.html">networking</a>). The three causes below are
+    unrelated to iwd specifically: anything that registers itself on the
+    system bus at startup can hit any of them, and NetworkManager does
+    exactly that now. It looked like a single dbus problem and was actually
+    three unrelated ones, found one at a time by adding boot logging and
+    reading what it said instead of guessing further:</p>
     <p><strong>1. <code>/var/run</code> did not exist.</strong> dbus itself
     listens on <code>/run/dbus/system_bus_socket</code> and was running
     correctly the entire time — confirmed directly with
     <code>dbus-send --system ... org.freedesktop.DBus.ListNames</code>,
-    which succeeded. But iwd is built on ell, a separate D-Bus client
-    library, and ell's default system bus lookup checks
+    which succeeded. But iwd (like bluez today) is built on ell, a separate
+    D-Bus client library, and ell's default system bus lookup checks
     <code>/var/run/dbus</code> specifically, not <code>/run/dbus</code>.
     On a system where <code>/var/run</code> is not a symlink to
     <code>/run</code> (the traditional FHS arrangement, and one this rootfs
-    build had simply never set up), that path does not exist, and iwd
-    cannot find a bus it is sitting right next to. Fixed by adding
-    <code>/var/run -&gt; ../run</code> and <code>/var/lock -&gt; ../run/lock</code>
-    as two more of the merged-filesystem symlinks created during the rootfs
-    build.</p>
+    build had simply never set up), that path does not exist, and an
+    ell-based client cannot find a bus it is sitting right next to. Fixed
+    by adding <code>/var/run -&gt; ../run</code> and
+    <code>/var/lock -&gt; ../run/lock</code> as two more of the
+    merged-filesystem symlinks created during the rootfs build.</p>
     <p><strong>2. The <code>netdev</code> group did not exist.</strong>
-    iwd ships its own D-Bus policy file
-    (<code>/usr/share/dbus-1/system.d/iwd-dbus.conf</code>) granting members
-    of a group called <code>netdev</code> access to
-    <code>net.connman.iwd</code>. dbus-daemon logs
+    iwd shipped its own D-Bus policy file granting members of a group
+    called <code>netdev</code> access to its bus name; NetworkManager's
+    own policy references the same group now. dbus-daemon logs
     <code>Unknown group "netdev" in message bus configuration file</code>
     and — this is the part that made it hard to spot — does not fail to
     start over this. It logs the warning, discards that one policy file, and
     continues running with everything else intact, so dbus itself looked
-    completely healthy while iwd was quietly unable to claim its own bus
-    name because the specific policy permitting it had been silently
-    dropped. Fixed by adding <code>netdev</code> as a real system group,
-    both on the live ISO and by the installer for a freshly installed
-    system.</p>
+    completely healthy while the service depending on that policy was
+    quietly unable to claim its own bus name because the specific policy
+    permitting it had been silently dropped. Fixed by adding
+    <code>netdev</code> as a real system group, both on the live ISO and
+    by the installer for a freshly installed system.</p>
     <p><strong>3. No machine ID had ever been generated.</strong>
     <code>dbus-daemon --system</code> refuses to start at all without
     <code>/etc/machine-id</code> (or the older
@@ -84,10 +89,11 @@ cat /var/log/boot.log     # from a previous boot</pre>
     never started, with nothing on screen or in any log to say why. Fixed
     by generating one on <code>/etc/rc.d/dbus</code>'s first start, via
     <code>dbus-uuidgen</code> if present or a random-hex fallback otherwise,
-    and never regenerating it again once one exists.</p>
+    and never regenerating it again once one exists - the same PRESTART
+    hook now runs for NetworkManager's own rc.d script too.</p>
     <p>To check the state of all three directly on a running system:</p>
     <pre class="code">service status dbus
-service status iwd
+service status NetworkManager
 ls -l /etc/machine-id
 readlink /var/run
 grep netdev /etc/group</pre>
@@ -105,6 +111,25 @@ grep netdev /etc/group</pre>
     runit, and so on), regenerate it explicitly in case the translation is
     stale relative to <code>/etc/rc.d</code>:</p>
     <pre class="code">arctic-init-setup openrc      # or whichever init is actually running</pre>
+  </section>
+
+  <section>
+    <h2><code>doas</code> says "Authentication failed" on the live image</h2>
+    <p>The live image logs straight in as root with an intentionally empty
+    password — there's nothing on a read-only image worth protecting, and
+    the installer needs root anyway. <code>login</code> treats that empty
+    shadow entry as "no password needed", but <code>doas</code>'s own auth
+    check does not: a rule that requires a password (the default unless a
+    rule says <code>nopass</code>) has no empty-input case to match, so it
+    fails no matter what you type at the prompt, including nothing. The
+    live image's own <code>/etc/doas.conf</code> is <code>permit nopass
+    :wheel</code> for exactly this reason, so <code>doas</code> should not
+    normally even ask. Confirm which one is actually in place:</p>
+    <pre class="code">cat /etc/doas.conf</pre>
+    <p>This only affects the live image. The installed system's own
+    <code>/etc/doas.conf</code>, written by <code>arctic-install</code>,
+    requires a password on purpose — that's the whole point of having a
+    real account with a real password on a real system.</p>
   </section>
 
   <section>

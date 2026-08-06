@@ -25,7 +25,7 @@
     <p>Boot the ISO. Wired networking comes up on its own via DHCP; for
     wireless, see <a href="/networking.html">networking</a> for the full
     picture, but the short version:</p>
-    <pre class="code">iwctl station wlan0 connect YOUR-NETWORK</pre>
+    <pre class="code">wifi-connect YOUR-NETWORK your-password</pre>
 
     <p>Then edit the config and run the installer:</p>
     <pre class="code">nano /etc/arctic/install.conf
@@ -35,10 +35,6 @@ arctic-install</pre>
     none. Which disk to use is something the config says, not something you
     type on the command line; there is no mount point to pass in and keep in
     sync by hand.</p>
-
-    <p>Underneath the Arctic logo on login, the live image prints a one-line
-    reminder of exactly this: connect to the network, edit
-    <code>/etc/arctic/install.conf</code>, run <code>arctic-install</code>.</p>
 
     <p><code>nano</code>, <code>vim</code> and <code>nvim</code> are all on
     the ISO, along with JetBrains Mono and the Nerd Font symbol set so a
@@ -69,7 +65,7 @@ Make these changes? [y/N]</pre>
 
   A_ROOT_FS=reiserfs is not valid (try: ext4 ext3 ext2 btrfs xfs f2fs zfs)
   A_SNAPSHOT=btrfs needs A_ROOT_FS=btrfs (this config has ext4)
-  A_ENCRYPT=yes but A_ENCRYPT_PASS is empty
+  A_ENCRYPT=y but A_ENCRYPT_PASS is empty
 
 Nothing has been changed. Fix the config and run arctic-install again.</pre>
     <p>Every error is reported together rather than one per run. Warnings — a
@@ -107,15 +103,15 @@ A_ROOT_FS=btrfs</pre>
     <pre class="code">A_ROOT_PART=/dev/sda2
 A_BOOT_PART=/dev/sda1
 A_HOME_PART=/dev/sda3
-A_FORMAT=no</pre>
-    <p>With <code>A_FORMAT=no</code> Arctic mounts the partitions exactly as
+A_FORMAT=n</pre>
+    <p>With <code>A_FORMAT=n</code> Arctic mounts the partitions exactly as
     they are and installs into whatever is already there — which is the way
     to keep an existing <code>/home</code> across a reinstall of root. An
     existing btrfs partition is detected by its filesystem type and its
     <code>@</code> subvolume layout is mounted, rather than the raw top
     level, so an install onto a btrfs root you made earlier lands correctly
     without needing to know the subvolume ID yourself.</p>
-    <p>Setting <code>A_FORMAT=yes</code> with existing partitions formats
+    <p>Setting <code>A_FORMAT=y</code> with existing partitions formats
     them fresh but does not repartition — the sizes and boundaries you chose
     stay exactly as they are.</p>
   </section>
@@ -147,7 +143,7 @@ A_BTRFS_OPTS="rw,noatime,compress=zstd:3,space_cache=v2"</pre>
     reasonable middle ground between size and CPU cost, and
     <code>space_cache=v2</code> avoids a slow free-space rescan on every
     mount that the v1 cache format is prone to.</p>
-    <p><code>A_BTRFS_NO_SNAPSHOT_CACHE=yes</code> adds a fifth subvolume,
+    <p><code>A_BTRFS_NO_SNAPSHOT_CACHE=y</code> adds a fifth subvolume,
     <code>@cache</code> → <code>/var/cache</code>, so package-manager and
     browser cache churn does not bloat every root snapshot taken
     afterward — shorthand for adding <code>@cache</code> to
@@ -157,7 +153,7 @@ A_BTRFS_OPTS="rw,noatime,compress=zstd:3,space_cache=v2"</pre>
   <section>
     <h2>Encryption</h2>
     <p>Full-disk LUKS2, applied under whichever filesystem you chose:</p>
-    <pre class="code">A_ENCRYPT=yes
+    <pre class="code">A_ENCRYPT=y
 A_ENCRYPT_PASS=your-passphrase</pre>
     <p>An initramfs bundling cryptsetup and the dm-crypt kernel modules is
     generated automatically for an encrypted install — Arctic's kernel
@@ -184,7 +180,7 @@ A_ENCRYPT_PASS=your-passphrase</pre>
       <tr><td><code>A_DESKTOP</code>, <code>A_DM</code>, <code>A_AUDIO</code></td>
           <td>see <a href="/desktops.html">desktops and audio</a></td></tr>
       <tr><td><code>A_USER</code>, <code>A_USERPASS</code>, <code>A_ROOTPASS</code>, <code>A_LOCK_ROOT</code></td>
-          <td>accounts; empty root password means the account is locked, same as <code>A_LOCK_ROOT=yes</code></td></tr>
+          <td>accounts; empty root password means the account is locked, same as <code>A_LOCK_ROOT=y</code></td></tr>
       <tr><td><code>A_SSH_KEYS</code>, <code>A_SSH_PASSWORD_AUTH</code></td>
           <td>authorized_keys contents, and whether sshd still accepts a password too</td></tr>
       <tr><td><code>A_NET</code>, <code>A_WIFI_SSID</code>, <code>A_IP</code>, <code>A_MAC_RANDOMIZE</code></td>
@@ -256,13 +252,13 @@ A_GENERATIONS=5</pre>
 
   <section>
     <h2>After the install</h2>
-    <p>Reboot (<code>A_REBOOT=yes</code> does this automatically, no
+    <p>Reboot (<code>A_REBOOT=y</code> does this automatically, no
     prompt), or stay to poke around first with
-    <code>A_CHROOT_SHELL=yes</code> — <code>/dev</code>, <code>/proc</code>
+    <code>A_CHROOT_SHELL=y</code> — <code>/dev</code>, <code>/proc</code>
     and <code>/sys</code> are bound into the new root for it, same as a real
     boot would have them. On first boot the account created is ready, root
     is locked if <code>A_ROOTPASS</code> was left empty (or
-    <code>A_LOCK_ROOT=yes</code> was set), and the network mode chosen is
+    <code>A_LOCK_ROOT=y</code> was set), and the network mode chosen is
     already configured. From here, ongoing changes go through
     <code>system.conf</code> — see
     <a href="/configure.html">declarative configuration</a>.</p>
