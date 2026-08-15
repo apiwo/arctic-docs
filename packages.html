@@ -53,9 +53,38 @@ alpm upgrade              upgrade everything installed to the latest available</
     offers to build it on the spot rather than simply failing:</p>
     <pre class="code">alpm ins -s some-package    build from the port, even when a binary also exists
 alpm build recipe           build a specific recipe file into an .alpmz directly</pre>
-    <p>On musl this is the normal, expected path rather than a fallback —
-    see <a href="/musl.html">musl</a> for why binaries are always glibc and
-    what that means for musl installs specifically.</p>
+    <p>Recipes come from the ports tree, which is a separate host from the
+    binary mirror and is never one of the repositories in
+    <code>/etc/alpm/repos.d</code>. alpm reaches it through
+    <code>ALPM_PORTS</code>, so "what can be installed" and "what can be
+    compiled" are never the same list.</p>
+  </section>
+
+  <section>
+    <h2>Undoing a transaction</h2>
+    <p>Every install and removal is a transaction, and
+    <code>alpm rollback</code> undoes one — the files it replaced go back,
+    the files it added are removed, and the package database returns to what
+    it described beforehand. A rolled-back install loses its database entry
+    entirely; a rolled-back upgrade gets the previous version's entry back.</p>
+    <pre class="code">alpm rollback              undo the most recent transaction
+alpm rollback 20260815-111525    undo a specific one
+alpm log                   what has been done, and which transactions are on disk</pre>
+    <p>On a btrfs root alpm also takes a filesystem snapshot before each
+    transaction, which catches anything a package's install script did on
+    its own — separate from the file-level rollback above.</p>
+  </section>
+
+  <section>
+    <h2>How installs are reported</h2>
+    <p><code>ALPM_STYLE</code> in <code>/etc/alpm/alpm.conf</code> chooses
+    the wording and layout. The resolver, the downloads and the progress are
+    identical in all three; only the presentation changes.</p>
+    <table>
+      <tr><td><code>arctic</code></td><td>the default — <code>::</code> headings, a line per dependency</td></tr>
+      <tr><td><code>apt</code></td><td>Debian's shape: <code>Reading package lists...</code>, a NEW-packages block, <code>Get:1 &lt;url&gt; [size]</code>, <code>Setting up &lt;pkg&gt; (&lt;version&gt;) ...</code></td></tr>
+      <tr><td><code>aeryn</code></td><td>Aeryn OS's shape: a boxed, columnar transaction summary</td></tr>
+    </table>
   </section>
 
   <section>
@@ -66,17 +95,15 @@ alpm build recipe           build a specific recipe file into an .alpmz directly
       <tr><td><code>extra</code></td><td>applications and general-purpose tools</td></tr>
       <tr><td><code>kernels</code></td><td>kernels, kernel headers, firmware</td></tr>
       <tr><td><code>profile</code></td><td>whole-environment meta packages — a desktop, an audio stack, in one name</td></tr>
-      <tr><td><code>musl</code></td><td>the subset of packages built against musl instead of glibc</td></tr>
       <tr><td><code>nonfree</code>, <code>alt-nonfree</code>, <code>multilib</code></td><td>off by default; opt in explicitly</td></tr>
     </table>
-    <p><code>musl</code> is a binary-repository concept specifically, worth
-    contrasting with the ports side: the same recipe in the ports tree
-    produces either a glibc or a musl package depending on which sandbox
-    builds it (<code>arctic-sandbox</code> versus
-    <code>arctic-musl-sandbox</code>), so ports themselves have no separate
-    "musl" or "source" category — a port is source, full stop, and which
-    libc it links against is a build-time decision, not a property of the
-    recipe's location in the tree.</p>
+    <p>Every one of these serves <code>.alpmz</code> binaries and nothing
+    else. There is no "source" repository: a repository holds built packages,
+    the ports tree holds recipes, and the two live on separate hosts —
+    <a href="https://pkg-arctic.apiwow.net">pkg-arctic.apiwow.net</a> and
+    <a href="https://ports-arctic.apiwow.net">ports-arctic.apiwow.net</a>.
+    Each index is generated from what the mirror actually holds, so a
+    repository cannot advertise a package it cannot serve.</p>
     <p>Configured per repository in <code>/etc/alpm/repos.d/*.repo</code>:</p>
     <pre class="code">name = main
 url = https://pkg-arctic.apiwow.net/ALL/main
@@ -136,7 +163,7 @@ arctic snapshots           list them via the arctic umbrella command</pre>
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 
   <footer>

@@ -30,6 +30,7 @@
       <tr><td><code>sysvinit</code></td><td>the traditional System V init. <code>/etc/inittab</code>, <code>/etc/rc3.d</code>.</td></tr>
       <tr><td><code>runit</code></td><td>small, direct process supervision. <code>/etc/sv</code>, <code>sv up</code>/<code>sv down</code>.</td></tr>
       <tr><td><code>dinit</code></td><td>dependency handling in a small footprint. <code>dinitctl</code>.</td></tr>
+      <tr><td><code>nitro</code></td><td>a supervisor small enough to read in one sitting. Services are directories under <code>/etc/nitro</code>, all state is kept in RAM, and <code>nitroctl</code> drives it.</td></tr>
       <tr><td><code>systemd-libre</code></td><td>units, journald, the usual suite, built without the nonfree firmware loading paths. Not packaged yet — see below.</td></tr>
     </table>
     <p>Choosing anything other than busybox installs that init and its
@@ -56,7 +57,7 @@ svc_main "$@"</pre>
     <code>CMD</code>, <code>ARGS</code> and <code>BACKGROUND</code> without
     executing the script, and generates the equivalent definition for
     whichever init is actually running — an OpenRC <code>init.d</code>
-    script, a runit <code>run</code> file, a dinit service file, an s6
+    script, a runit <code>run</code> file, a nitro service directory, a dinit service file, an s6
     service directory, a systemd unit.</p>
     <p>Shipping one definition and generating the rest, instead of hand
     maintaining eight parallel copies of every service, means adding a
@@ -85,7 +86,11 @@ arctic-init-setup runit --root /mnt   or write them into a target root, e.g. fro
     the output suggesting anything was wrong.</p>
     <p>A service with a <code>CMD</code> becomes a properly supervised
     process under the target init. One without becomes a one-shot that calls
-    the <code>rc.d</code> script's own start and stop directly — under runit
+    the <code>rc.d</code> script's own start and stop directly — under nitro
+    a service with a <code>run</code> script is supervised, one with only a
+    <code>setup</code> script is a one-shot that stays up once it succeeds,
+    and a disabled service gets a <code>down</code> file rather than being
+    left out of the directory; under runit
     specifically, that means living in the stage-1 boot script rather than
     under <code>/etc/sv</code>, since runit's supervision model has no
     concept of "run once and exit successfully" the way dinit's
@@ -133,7 +138,7 @@ arctic-init-setup runit --root /mnt   or write them into a target root, e.g. fro
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/musl.html">musl</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
+    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 
   <footer>
