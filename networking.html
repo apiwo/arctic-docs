@@ -85,7 +85,12 @@ A_DNS="1.1.1.1 9.9.9.9"</pre>
     live image (a small, live-only rc.d/network service - not the same
     thing as the installed system's networking, and installed systems never
     enable it). Wireless is manual there:</p>
-    <pre class="code">wifi-connect your-network your-password</pre>
+    <pre class="code">wifi-connect scan                              networks in range
+wifi-connect list-networks                     the same list, names only
+wifi-connect your-network your-password        join one</pre>
+    <p>The first two exist because the third needs a name you may not know:
+    on a machine with no other way online, there was previously no way to
+    find out what the network is called.</p>
     <p>This drives wpa_supplicant directly (WPA2-Personal only - no
     802.1X/enterprise on the live image, that needs a TLS backend that
     isn't built this early) and requests a DHCP lease once associated.

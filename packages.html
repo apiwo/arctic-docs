@@ -37,7 +37,29 @@ alpm list                 everything currently installed
 alpm files vim            every file a package owns
 alpm owns /usr/bin/vim    which installed package owns a given file
 alpm fetch all            refresh the repository indexes over the network
-alpm upgrade              upgrade everything installed to the latest available</pre>
+alpm upgrade              upgrade everything installed to the latest available
+alpm system upgrade       all of the above, plus the kernel, the bootloader
+                          and any pending fixes, in that order
+alpm system fix           corrections that no version change would carry</pre>
+
+    <h3>alpm system fix</h3>
+    <p>Some corrections do not move a package version: a default that turned
+    out to be harmful, a service file that was wrong, a script that failed on
+    some machines. An upgrade cannot carry those, because there is no newer
+    version to upgrade <em>to</em>, and before this the only way one reached
+    an installed machine was reinstalling it.</p>
+    <p>The fix repository is where they live. It is an ordinary binary
+    repository — the packages in it are <code>.alpmz</code> files like any
+    other, so applying a fix is still an install and the system stays binary —
+    with one extra file naming which correction rides in which package, how
+    much it matters, and what part of the system it touches.</p>
+<pre class="code">alpm system fix               everything pending
+alpm system fix bootloader    only what might explain a machine that will not boot
+alpm system fix kernel
+alpm system fix major         only the most serious
+alpm system fix bugfix        both fix levels, and none of the changes</pre>
+    <p>Every pending fix is listed before anything is installed, and applied
+    fixes are remembered, so one is offered once and never again.</p>
     <p>On a configured system, prefer editing
     <code>system.conf</code> and running <code>arctic-rebuild</code> over
     calling <code>alpm ins</code> directly — see

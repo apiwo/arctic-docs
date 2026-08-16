@@ -96,8 +96,15 @@ build/arctic-qemu wipe        delete the test disk and start over</pre>
     <h2>The toolchain</h2>
     <p>glibc specifically cannot be compiled with clang — upstream glibc
     requires GCC — so <code>build-rootfs.sh</code> uses the host's own GCC
-    as a stage-0 tool for glibc alone, once, and nothing else it might
-    produce along the way is packaged or relied on further.</p>
+    as a stage-0 tool for glibc alone, once.</p>
+    <p>That is the intent, and it is worth being straight about how far
+    reality has got: the packages in the current alpha were compiled by GCC,
+    not by clang. <code>alpm build</code> now refuses GCC unless told
+    otherwise, and <code>llvm</code> is packaged, which is what makes
+    rebuilding the distribution against clang possible — but that rebuild has
+    not happened yet, so an installed Arctic system today links against
+    libstdc++ rather than libc++. Treat &ldquo;GNU-free&rdquo; as the
+    direction, not as a description of the current image.</p>
     <p>One detail worth knowing if you write or modify recipes:
     <code>alpm-build</code> exports <code>pkgdir</code> to every recipe but
     deliberately does not export <code>srcdir</code>. <code>srcdir</code> is
