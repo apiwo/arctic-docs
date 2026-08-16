@@ -27,7 +27,11 @@
     <p>Boot the ISO. Wired networking comes up on its own via DHCP; for
     wireless, see <a href="/networking.html">networking</a> for the full
     picture, but the short version:</p>
-    <pre class="code">wifi-connect YOUR-NETWORK your-password</pre>
+    <pre class="code">wifi-connect</pre>
+    <p>It scans, lists what is in range, asks which interface and which
+    network, and takes the passphrase with the characters masked. If you
+    already know the network and want no questions:
+    <code>wifi-connect YOUR-NETWORK your-password</code>.</p>
 
     <p>Then edit the config and run the installer:</p>
     <pre class="code">nano /etc/arctic/install.conf
