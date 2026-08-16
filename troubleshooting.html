@@ -185,7 +185,7 @@ grep netdev /etc/group</pre>
     a multi-call binary's fallback applet.</p>
     <p>If it is a package from the Arctic repositories, it is a packaging
     bug: report it. Removing the current owner works, and so does
-    <code>alpm del --force</code> on it, but on a base system that owner is
+    <code>alpm rem -f</code> on it, but on a base system that owner is
     usually busybox and removing it is worse than the conflict.</p>
 
     <h2>A build fails with a permission or read-only error</h2>

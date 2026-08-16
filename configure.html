@@ -31,7 +31,7 @@
     it with a new one.</p>
     <pre class="code">/etc/arctic/system.conf     what the machine is
 arctic-rebuild               make it so</pre>
-    <p>You do not <code>alpm ins</code> things onto a configured Arctic
+    <p>You do not <code>alpm add</code> things onto a configured Arctic
     system as the normal way of working. You add a line to the file and
     rebuild. The difference is not stylistic: the file stays a complete,
     accurate description of the machine at all times, which is what makes
@@ -81,7 +81,7 @@ arctic-rebuild --dry-run  show what would change, change nothing</pre>
   + enable services: sshd
 :: now on generation 5
 :: rebuild complete</pre>
-    <p>Removals go through <code>alpm del+deps</code>, so anything that was
+    <p>Removals go through <code>alpm rem -d</code>, so anything that was
     only pulled in as tmux's dependency and is not needed elsewhere goes too
     — while alpm's own protected-package list still refuses to remove the
     base system no matter what the file happens to say, so a typo that

@@ -31,9 +31,9 @@
     <code>.FILES</code> manifest, and the actual payload rooted at
     <code>/</code>, so installing one is close to literally unpacking a
     tarball with bookkeeping on top.</p>
-    <pre class="code">alpm ins vim              install
-alpm del vim              remove
-alpm del+deps vim         remove, and anything only it needed as a dependency
+    <pre class="code">alpm add vim              install
+alpm rem vim              remove
+alpm rem -d vim         remove, and anything only it needed as a dependency
 alpm search editor        search names and descriptions
 alpm info vim             what a package is, its version, its dependencies
 alpm list                 everything currently installed
@@ -65,7 +65,7 @@ alpm system fix bugfix        both fix levels, and none of the changes</pre>
     fixes are remembered, so one is offered once and never again.</p>
     <p>On a configured system, prefer editing
     <code>system.conf</code> and running <code>arctic-rebuild</code> over
-    calling <code>alpm ins</code> directly — see
+    calling <code>alpm add</code> directly — see
     <a href="/configure.html">declarative configuration</a> for why. Using
     alpm directly still works exactly as shown above; the difference is only
     that the next rebuild will remove anything installed this way that the
@@ -78,9 +78,9 @@ alpm system fix bugfix        both fix levels, and none of the changes</pre>
     offers to build it on the spot rather than simply failing. This needs a
     compiler, which means the <code>llvm</code> package — clang and lld — and
     until it was built there was nothing on an installed machine to compile
-    with and <code>alpm ins -s</code> stopped with
+    with and <code>alpm add -s</code> stopped with
     <code>missing: clang ld.lld</code>:</p>
-    <pre class="code">alpm ins -s some-package    build from the port, even when a binary also exists
+    <pre class="code">alpm add -s some-package    build from the port, even when a binary also exists
 alpm build recipe           build a specific recipe file into an .alpmz directly</pre>
     <p>Recipes come from the ports tree, which is a separate host from the
     binary mirror and is never one of the repositories in
@@ -158,7 +158,7 @@ pkgurl = https://github.com/apiwo/arctic-linux-pkgs/releases/download/pkgs-x86_6
 enabled = yes
 priority = 25</pre>
     <p>Nothing about installing one of them is different:
-    <code>alpm ins linux-firmware</code>.</p>
+    <code>alpm add linux-firmware</code>.</p>
   </section>
 
   <section>
