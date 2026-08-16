@@ -10,7 +10,7 @@
 <nav class="topbar">
   <div class="wrap" style="padding:0;">
     <a href="/">docs</a>
-    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://github.com/apiwo/arctic-linux-pkgs">packages</a>
     <a href="https://ports-arctic.apiwow.net">ports</a>
     <a href="https://github.com/apiwo/arctic-linux">github</a>
   </div>
@@ -105,6 +105,24 @@ build/arctic-qemu wipe        delete the test disk and start over</pre>
     not happened yet, so an installed Arctic system today links against
     libstdc++ rather than libc++. Treat &ldquo;GNU-free&rdquo; as the
     direction, not as a description of the current image.</p>
+    <p>A trap on a multilib build host, because it produces an error that
+    names the wrong culprit. There <code>/usr/lib</code> is the
+    <em>32-bit</em> directory and the 64-bit one is <code>/usr/lib64</code>.
+    Arctic installs to <code>/usr/lib</code>, so every <code>.la</code> file
+    records <code>libdir=/usr/lib</code> and libtool searches it when it
+    relinks at <code>make install</code>. What it finds there is glibc's
+    32-bit <code>libc.so</code>, which is a linker script beginning
+    <code>OUTPUT_FORMAT(elf32-i386)</code>, and lld honours that over the
+    <code>-m elf_x86_64</code> the compiler driver already passed — so every
+    64-bit object on the line, including the crt files the driver itself put
+    there, is rejected:</p>
+    <pre class="code">ld.lld: error: .libs/libssl_la-ssl_lib.o is incompatible with elf32-i386</pre>
+    <p>Nothing on that command line asked for 32-bit code, and the package
+    being built is not at fault — libressl failed this way and it read as a
+    libressl bug for a long time. <code>alpm-build</code> detects that layout
+    and puts the host's 64-bit directory on the link line behind the sysroot,
+    which still answers first for anything Arctic built itself.</p>
+
     <p>One detail worth knowing if you write or modify recipes:
     <code>alpm-build</code> exports <code>pkgdir</code> to every recipe but
     deliberately does not export <code>srcdir</code>. <code>srcdir</code> is

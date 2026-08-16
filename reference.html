@@ -10,7 +10,7 @@
 <nav class="topbar">
   <div class="wrap" style="padding:0;">
     <a href="/">docs</a>
-    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://github.com/apiwo/arctic-linux-pkgs">packages</a>
     <a href="https://ports-arctic.apiwow.net">ports</a>
     <a href="https://github.com/apiwo/arctic-linux">github</a>
   </div>
@@ -107,7 +107,7 @@
       <tr><th>Variable</th><th>Default</th><th>What it does</th></tr>
       <tr><td><code>A_USER</code></td><td></td><td>no account created, log in as root</td></tr>
       <tr><td><code>A_USERPASS</code></td><td></td><td>password for A_USER</td></tr>
-      <tr><td><code>A_ROOTPASS</code></td><td></td><td>root stays locked</td></tr>
+      <tr><td><code>A_ROOTPASS</code></td><td></td><td>root ships locked and stays that way if this is empty. The install refuses to run unless something can log in: this, or A_USER with A_USERPASS, or A_SSH=y with A_SSH_KEYS</td></tr>
       <tr><td><code>A_LOCK_ROOT</code></td><td><code>n</code></td><td>lock root outright once A_USER exists; wins over A_ROOTPASS</td></tr>
       <tr><td><code>A_SHELL</code></td><td><code>/bin/zsh</code></td><td></td></tr>
       <tr><td><code>A_USER_GROUPS</code></td><td><code>wheel users audio video input</code></td><td></td></tr>

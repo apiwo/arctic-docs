@@ -10,7 +10,7 @@
 <nav class="topbar">
   <div class="wrap" style="padding:0;">
     <a href="/">docs</a>
-    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://github.com/apiwo/arctic-linux-pkgs">packages</a>
     <a href="https://ports-arctic.apiwow.net">ports</a>
     <a href="https://github.com/apiwo/arctic-linux">github</a>
   </div>
@@ -72,7 +72,11 @@ alpm system fix bugfix        both fix levels, and none of the changes</pre>
   <section>
     <h2>Building from source</h2>
     <p>Not every package has a binary built for it. When one does not, alpm
-    offers to build it on the spot rather than simply failing:</p>
+    offers to build it on the spot rather than simply failing. This needs a
+    compiler, which means the <code>llvm</code> package — clang and lld — and
+    until it was built there was nothing on an installed machine to compile
+    with and <code>alpm ins -s</code> stopped with
+    <code>missing: clang ld.lld</code>:</p>
     <pre class="code">alpm ins -s some-package    build from the port, even when a binary also exists
 alpm build recipe           build a specific recipe file into an .alpmz directly</pre>
     <p>Recipes come from the ports tree, which is a separate host from the
@@ -117,28 +121,72 @@ alpm log                   what has been done, and which transactions are on dis
       <tr><td><code>extra</code></td><td>applications and general-purpose tools</td></tr>
       <tr><td><code>kernels</code></td><td>kernels, kernel headers, firmware</td></tr>
       <tr><td><code>profile</code></td><td>whole-environment meta packages — a desktop, an audio stack, in one name</td></tr>
+      <tr><td><code>fix</code></td><td>corrections that no version change would carry — see <code>alpm system fix</code></td></tr>
+      <tr><td><code>big</code></td><td>packages past the mirror's file size limit: firmware, the toolchain</td></tr>
       <tr><td><code>nonfree</code>, <code>alt-nonfree</code>, <code>multilib</code></td><td>off by default; opt in explicitly</td></tr>
     </table>
     <p>Every one of these serves <code>.alpmz</code> binaries and nothing
     else. There is no "source" repository: a repository holds built packages,
     the ports tree holds recipes, and the two live on separate hosts —
-    <a href="https://pkg-arctic.apiwow.net">pkg-arctic.apiwow.net</a> and
+    <a href="https://github.com/apiwo/arctic-linux-pkgs">arctic-linux-pkgs</a>,
+    served over <code>raw.githubusercontent.com</code>, and
     <a href="https://ports-arctic.apiwow.net">ports-arctic.apiwow.net</a>.
     Each index is generated from what the mirror actually holds, so a
     repository cannot advertise a package it cannot serve.</p>
     <p>Configured per repository in <code>/etc/alpm/repos.d/*.repo</code>:</p>
     <pre class="code">name = main
-url = https://pkg-arctic.apiwow.net/ALL/main
+url = https://raw.githubusercontent.com/apiwo/arctic-linux-pkgs/main/ALL/main
 enabled = yes
-priority = 10</pre>
+priority = 10
+sig = optional</pre>
     <p>Browse the actual contents at
-    <a href="https://pkg-arctic.apiwow.net">pkg-arctic.apiwow.net</a> and
-    the ports/recipes at
-    <a href="https://ports-arctic.apiwow.net">ports-arctic.apiwow.net</a>.
-    Packages and firmware larger than 25 MiB are served from GitHub Releases
-    instead of the package host directly, since that is the free-tier file
-    size limit on the hosting used — the listing marks those entries
-    clearly rather than presenting a broken-looking local link.</p>
+    <a href="https://github.com/apiwo/arctic-linux-pkgs">arctic-linux-pkgs</a>
+    and the recipes at
+    <a href="https://ports-arctic.apiwow.net">ports-arctic.apiwow.net</a>.</p>
+    <p>A package of 100 MiB or more cannot be served from a git mirror at all,
+    and the ones that cross that line are not optional extras:
+    <code>linux-firmware</code> is 162 MiB and the packaged toolchain is
+    148 MiB. Those are release assets, and the <code>big</code> repository is
+    how alpm reaches them — its index sits in the tree with all the others,
+    and a <code>pkgurl</code> line points the package files somewhere else:</p>
+    <pre class="code">name = big
+url = https://raw.githubusercontent.com/apiwo/arctic-linux-pkgs/main/ALL/big
+pkgurl = https://github.com/apiwo/arctic-linux-pkgs/releases/download/pkgs-x86_64
+enabled = yes
+priority = 25</pre>
+    <p>Nothing about installing one of them is different:
+    <code>alpm ins linux-firmware</code>.</p>
+  </section>
+
+  <section>
+    <h2>Signatures</h2>
+    <p>Every index is signed with <a href="https://man.openbsd.org/signify">signify</a>
+    — OpenBSD's tool, Ed25519, one line of public key. No key server, no web
+    of trust, and no GPG anywhere near the base system.</p>
+    <p>The index is worth signing because of what it is: it says which
+    packages exist, where they are and what they hash to. A forged one hands
+    a machine any package at all, and the per-package checksum alpm verifies
+    afterwards is taken from that same forged file — so whoever can answer
+    for the mirror can serve a matching <code>INDEX.sha256</code> beside it.
+    A signature is the repository's own word instead of the connection's.</p>
+    <p>The public key arrives with <code>arctic-base</code>, in
+    <code>/etc/alpm/keys</code>, so it is on the machine before its first
+    fetch rather than being downloaded alongside what it is meant to verify.
+    Every <code>.pub</code> file there is tried, which is what makes rotating
+    a key possible: ship the new one beside the old, and drop the old once
+    the repositories have moved over.</p>
+    <p>How much a signature matters is per repository:</p>
+    <pre class="code">sig = required   an index without a good signature is not used
+sig = optional   checked when it can be, said out loud when it cannot (default)
+sig = off        not checked at all</pre>
+    <p>A signature that does not match is refused under all three — a bad
+    signature is not a missing one. Only a missing signature is tolerated,
+    and only while the installation image is still built without signify on
+    it; an installed system has both the verifier and the key, so its
+    repositories can be set to <code>required</code>.</p>
+    <pre class="code">alpm fetch all
+  -> fix            unsigned
+     the signature does not match any key in /etc/alpm/keys</pre>
   </section>
 
   <section>

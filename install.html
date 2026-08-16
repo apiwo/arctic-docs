@@ -10,7 +10,7 @@
 <nav class="topbar">
   <div class="wrap" style="padding:0;">
     <a href="/">docs</a>
-    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://github.com/apiwo/arctic-linux-pkgs">packages</a>
     <a href="https://ports-arctic.apiwow.net">ports</a>
     <a href="https://github.com/apiwo/arctic-linux">github</a>
   </div>
@@ -180,7 +180,7 @@ A_ENCRYPT_PASS=your-passphrase</pre>
       <tr><td><code>A_DESKTOP</code>, <code>A_DM</code>, <code>A_AUDIO</code></td>
           <td>see <a href="/desktops.html">desktops and audio</a></td></tr>
       <tr><td><code>A_USER</code>, <code>A_USERPASS</code>, <code>A_ROOTPASS</code>, <code>A_LOCK_ROOT</code></td>
-          <td>accounts; empty root password means the account is locked, same as <code>A_LOCK_ROOT=y</code></td></tr>
+          <td>accounts. root ships locked and stays locked with an empty <code>A_ROOTPASS</code>, and a user created with no <code>A_USERPASS</code> is locked too — so the install needs at least one of them, or an authorised ssh key, and refuses a config that gives none</td></tr>
       <tr><td><code>A_SSH_KEYS</code>, <code>A_SSH_PASSWORD_AUTH</code></td>
           <td>authorized_keys contents, and whether sshd still accepts a password too</td></tr>
       <tr><td><code>A_NET</code>, <code>A_WIFI_SSID</code>, <code>A_IP</code>, <code>A_MAC_RANDOMIZE</code></td>
@@ -259,7 +259,11 @@ A_GENERATIONS=5</pre>
     boot would have them. On first boot the account created is ready, root
     is locked if <code>A_ROOTPASS</code> was left empty (or
     <code>A_LOCK_ROOT=y</code> was set), and the network mode chosen is
-    already configured. From here, ongoing changes go through
+    already configured. A config that sets no root password, no user
+    password and no ssh key does not get this far: it would produce a system
+    nobody could log into, which is a thing you find out at the first boot
+    with the medium already put away, so <code>arctic-install</code> stops at
+    the config check instead. From here, ongoing changes go through
     <code>system.conf</code> — see
     <a href="/configure.html">declarative configuration</a>.</p>
   </section>

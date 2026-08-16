@@ -10,7 +10,7 @@
 <nav class="topbar">
   <div class="wrap" style="padding:0;">
     <a href="/">docs</a>
-    <a href="https://pkg-arctic.apiwow.net">packages</a>
+    <a href="https://github.com/apiwo/arctic-linux-pkgs">packages</a>
     <a href="https://ports-arctic.apiwow.net">ports</a>
     <a href="https://github.com/apiwo/arctic-linux">github</a>
   </div>
@@ -154,6 +154,37 @@ grep netdev /etc/group</pre>
   </section>
 
   <section>
+    <h2>A repository says "unsigned"</h2>
+    <pre class="code">-> main           unsigned
+   the signature does not match any key in /etc/alpm/keys</pre>
+    <p>The index downloaded perfectly well and was then thrown away, so this
+    is not a network fault and nothing about the connection is worth
+    checking. Either the public keys in <code>/etc/alpm/keys</code> are not
+    the ones these repositories are signed with — an old key after a
+    rotation, usually, fixed by an <code>arctic-base</code> upgrade — or what
+    answered is not the repository it claims to be.</p>
+    <p><code>the repository served no INDEX.sig</code> is the softer version:
+    nothing was signed at all. That is tolerated on a repository set to
+    <code>sig = optional</code> and refused on one set to
+    <code>required</code>. A local <code>file://</code> repository, or
+    somebody else's, has no reason to carry a signature Arctic's key would
+    match — set <code>sig = off</code> on those rather than turning
+    verification off everywhere.</p>
+
+    <h2>An install stops on a file conflict</h2>
+    <pre class="code">E: file conflict: /usr/bin/blkid is owned by busybox
+  both would install a different /usr/bin/blkid</pre>
+    <p>Two packages ship the same path with different contents, and alpm
+    stops rather than letting whichever is installed second win silently.
+    Identical files are not a conflict — the path is handed over — and
+    neither is a package whose recipe declares <code>replaces</code> for the
+    current owner, which is how a dedicated implementation takes a path from
+    a multi-call binary's fallback applet.</p>
+    <p>If it is a package from the Arctic repositories, it is a packaging
+    bug: report it. Removing the current owner works, and so does
+    <code>alpm del --force</code> on it, but on a base system that owner is
+    usually busybox and removing it is worse than the conflict.</p>
+
     <h2>A build fails with a permission or read-only error</h2>
     <p>This is the sandbox working as intended, not a bug — see
     <a href="/building.html">building from source</a> for exactly why
