@@ -87,9 +87,20 @@ A_DNS="1.1.1.1 9.9.9.9"</pre>
     live image (a small, live-only rc.d/network service - not the same
     thing as the installed system's networking, and installed systems never
     enable it). Wireless is manual there:</p>
-    <pre class="code">wifi-connect scan                              networks in range
+    <pre class="code">wifi-connect                                   scan, pick, connect
+wifi-connect scan                              networks in range
 wifi-connect list-networks                     the same list, names only
-wifi-connect your-network your-password        join one</pre>
+wifi-connect your-network your-password        join one without being asked</pre>
+    <p>Run with no arguments it does the whole thing: it brings the interface
+    up, scans (which takes a few seconds and says so), lists what is in range
+    strongest first, asks which interface if there is more than one, asks
+    which network, and reads the passphrase with the characters shown as
+    asterisks. Then it associates, takes a lease, and prints the address, the
+    gateway and the resolver it ended up with.</p>
+    <p>This needs <code>iw</code>, which is on the installation image. It was
+    not, for a long time, and the consequence was that nothing on the image
+    could list a network at all — the only way onto wireless was to type an
+    SSID exactly right from memory.</p>
     <p>The first two exist because the third needs a name you may not know:
     on a machine with no other way online, there was previously no way to
     find out what the network is called.</p>

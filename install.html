@@ -254,6 +254,17 @@ A_GENERATIONS=5</pre>
 
   <section>
     <h2>After the install</h2>
+    <p>The bootloader goes in as part of the install — there is no second
+    command to run afterwards. It asks first, naming the partition it is about
+    to write to rather than the directory that partition happens to be mounted
+    on: <code>Install bootloader to partition "/dev/nvme0n1p1"? [Y/n]</code>.</p>
+    <p>If the graphics choice was <code>nvidia</code> or <code>nouveau</code>,
+    the driver is configured as well as installed — modprobe rules, the
+    blacklist for the other one, and a regenerated initramfs — and the
+    installer says <em>Reboot is needed to apply changes.</em> The running
+    kernel already bound a driver at boot and a module cannot replace one that
+    is currently driving the card.</p>
+
     <p>Reboot (<code>A_REBOOT=y</code> does this automatically, no
     prompt), or stay to poke around first with
     <code>A_CHROOT_SHELL=y</code> — <code>/dev</code>, <code>/proc</code>
