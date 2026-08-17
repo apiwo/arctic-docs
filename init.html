@@ -28,8 +28,8 @@
     <p>Set it at install time:</p>
     <pre class="code">A_INIT=busybox</pre>
     <table>
-      <tr><td><code>initialization</code></td><td><strong>the default.</strong> Arctic's own fork of nitro: a supervisor that runs as pid 1, reads a directory of service definitions, and reports each service as it comes up. Installed as a package.</td></tr>
-      <tr><td><code>busybox</code></td><td>busybox init, <code>/etc/rc.boot</code>, <code>/etc/rc.d</code> scripts. Nothing extra installed — this is the shape every service definition is written in, and what the others are translated from.</td></tr>
+      <tr><td><code>busybox</code></td><td><strong>the default.</strong> busybox init, <code>/etc/rc.boot</code>, <code>/etc/rc.d</code> scripts. Nothing extra installed — this is the shape every service definition is written in, and what the others are translated from. It is the only init verified to boot every release so far.</td></tr>
+      <tr><td><code>initialization</code></td><td>Arctic's own fork of nitro: a supervisor that runs as pid 1, reads a directory of service definitions, and reports each service as it comes up. Installed as a package. Not the default as of a2.2 — a machine installed with it has frozen partway through boot and never reached a login; the cause is not yet diagnosed. Choose it deliberately, and be ready to boot busybox instead if it does not come up.</td></tr>
       <tr><td><code>openrc</code></td><td>dependency-based, from Gentoo. <code>/etc/init.d</code>, <code>rc-update</code>.</td></tr>
       <tr><td><code>sysvinit</code></td><td>the traditional System V init. <code>/etc/inittab</code>, <code>/etc/rc3.d</code>.</td></tr>
       <tr><td><code>runit</code></td><td>small, direct process supervision. <code>/etc/sv</code>, <code>sv up</code>/<code>sv down</code>.</td></tr>

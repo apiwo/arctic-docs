@@ -110,6 +110,14 @@ wifi-connect your-network your-password        join one without being asked</pre
     isn't built this early) and requests a DHCP lease once associated.
     Once you've installed and rebooted into the real system, that's where
     NetworkManager/nmtui takes over and the config above applies.</p>
+    <p><code>iw</code> and <code>wireless-regdb</code> are installed onto the
+    target system as well, as of a2.4 - not only the live image. A fresh
+    install had wpa_supplicant with nothing that could scan for a network to
+    give it, which is a closed loop: no network, no way to fetch
+    <code>iw</code>, no way onto a network without it. <code>wifi-connect</code>
+    works the moment a finished install boots now, and stays useful
+    afterward as a repair tool if NetworkManager's own configuration ever
+    needs troubleshooting from a shell.</p>
   </section>
 
   <section>

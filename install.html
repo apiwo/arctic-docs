@@ -210,18 +210,29 @@ A_ENCRYPT_PASS=your-passphrase</pre>
 
   <section>
     <h2>What the installer does, in order</h2>
-    <p>Validate the config, print the summary above, and ask for
-    confirmation. Partition (if <code>A_DISK</code> was set) or mount the
-    given partitions. Unpack the base system. Install the chosen kernel and
-    firmware. Install the init system if not busybox, translating services
-    for it. Install everything else the config asked for — desktop, audio,
-    networking tools, extra packages, package sets, fonts. Create accounts,
-    write authorized_keys. Write <code>/etc/fstab</code> from the real mount
-    table plus <code>A_MOUNTS</code>. Set up swap and zram. Install the
-    bootloader — <code>A_BOOTLOADER</code> and the rest of the boot section
-    are read straight off the same config, so this needs nothing further.
-    Run <code>A_POST</code>. Seed <code>/etc/arctic/system.conf</code> from
-    what was just installed, and record generation 1.</p>
+    <p>Fetch every repository first, before touching the disk at all - not
+    something to run by hand beforehand any more. Validate the config, print
+    the summary above, and ask for confirmation. Partition (if
+    <code>A_DISK</code> was set) or mount the given partitions - unmounting
+    the target from wherever it's currently mounted first, so a retry after
+    a failed attempt doesn't hit <code>mke2fs</code> refusing to format a
+    device it thinks is still in use. Unpack the base system. Install the
+    chosen kernel and firmware. Install networking tools - this is not
+    optional; a machine with no path onto a network at all is treated the
+    same as one with no kernel. Install the init system if not busybox,
+    translating services for it. Install everything else the config asked
+    for — desktop, audio, extra packages, package sets, fonts. Create
+    accounts, write authorized_keys. Write <code>/etc/fstab</code> from the
+    real mount table plus <code>A_MOUNTS</code>. Set up swap and zram.
+    Install the bootloader — <code>A_BOOTLOADER</code> and the rest of the
+    boot section are read straight off the same config, so this needs
+    nothing further. Run <code>A_POST</code>. Seed
+    <code>/etc/arctic/system.conf</code> from what was just installed, and
+    record generation 1.</p>
+    <p>A step that fails prints the last lines of the install log along with
+    the error, not just a one-sentence reason, and unmounts everything under
+    the target before exiting - the next attempt starts clean rather than
+    needing <code>umount -R</code> run by hand first.</p>
     <p>The fstab step is generated from <code>/proc/mounts</code> after
     everything is mounted, not reconstructed from the config. Whatever the
     install actually ended up with — including the case where formatting an
