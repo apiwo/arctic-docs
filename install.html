@@ -101,7 +101,8 @@ adduser you
 alpm add arctic-base
 alpm add arctic-base-kernel
 alpm add limine
-arctic-mkinitramfs</pre>
+arctic-mkinitramfs
+arctic-rebuild</pre>
     <p>Swap <code>limine</code> for <code>grub</code> on a BIOS install
     if you'd rather have GRUB. Swap <code>arctic-base-kernel</code> for
     any other flavor - <code>alpm search kernel</code> lists them, see
@@ -109,27 +110,29 @@ arctic-mkinitramfs</pre>
     only needs to run explicitly here because you're doing it from inside
     a chroot rather than through a normal package upgrade, which triggers
     it as a hook automatically afterward.</p>
+    <p><code>arctic-rebuild</code> has to run here, inside the chroot,
+    not after exiting it - it reads plain <code>/etc/fstab</code>,
+    <code>/etc/crypttab</code> and <code>/boot</code>, which only mean
+    the target's own copies from inside the target. It activates any
+    kernel package still marked <code>-nomod</code> (a kernel installed
+    from inside a chroot can't run its own post-install hooks there -
+    no running kernel to build an initramfs against yet) and writes
+    <code>limine.conf</code>/<code>grub.cfg</code>. It never runs the
+    actual deploy command - that's the one manual step left, and it
+    happens back outside.</p>
     <p>Exit the chroot when done (<code>exit</code> or Ctrl-D).</p>
   </section>
 
   <section>
-    <h2>Finishing and the bootloader</h2>
+    <h2>Deploying the bootloader</h2>
     <p>Back on the live environment, as root:</p>
-    <pre class="code">arctic-rebuild</pre>
-    <p>This activates any kernel package still marked <code>-nomod</code>
-    (a kernel installed from inside a chroot can't run its own
-    post-install hooks there - no running kernel to build an initramfs
-    against yet) and writes <code>limine.conf</code>/<code>grub.cfg</code>
-    from the real <code>/etc/fstab</code>/<code>/etc/crypttab</code> now
-    sitting on the target. It never runs the actual deploy command -
-    that's the one manual step left:</p>
     <pre class="code"><span class="c"># BIOS, Limine</span>
 limine bios-install /dev/sdX
 
-<span class="c"># EFI, Limine - copy the binaries onto the mounted ESP, then register an entry</span>
+<span class="c"># EFI, Limine - the target's own copy, not the live environment's</span>
 mkdir -p /mnt/boot/EFI/BOOT /mnt/boot/EFI/arctic
-cp /usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/BOOT/
-cp /usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/arctic/arcticx64.efi
+cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/BOOT/
+cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/arctic/arcticx64.efi
 efibootmgr --create --disk /dev/sdX --part 1 \
   --loader '\EFI\arctic\arcticx64.efi' --label 'Arctic linux'
 
@@ -143,7 +146,8 @@ grub-install --target=i386-pc --boot-directory=/mnt/boot /dev/sdX</pre>
     <p>Mount the root partition (and boot partition, if separate) under
     <code>/mnt</code>, then <code>/mnt/usr/bin/arctic-chroot /mnt</code> - the
     same tool used during install works identically afterward. Re-run
-    <code>arctic-rebuild</code> from outside the chroot to fix a stale
+    <code>arctic-rebuild</code> from inside that chroot, same as during
+    install, to fix a stale
     bootloader config or reactivate a kernel.</p>
   </section>
 
