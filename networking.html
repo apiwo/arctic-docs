@@ -118,6 +118,25 @@ wifi-connect your-network your-password        join one without being asked</pre
     works the moment a finished install boots now, and stays useful
     afterward as a repair tool if NetworkManager's own configuration ever
     needs troubleshooting from a shell.</p>
+    <p>Two more things had to be true for wifi to actually work on a real
+    install rather than only the live image, which logs in as root: firmware
+    and privilege. The live image carries a curated wireless firmware set
+    that never reached a fresh install - <code>linux-firmware</code> itself
+    is well over the mirror's size limit, so fetching it as a package 404d
+    silently - and now gets copied onto the target directly at install time
+    instead. And <code>wifi-connect</code> re-execs itself through
+    <code>doas</code> when it isn't already root, which only matters once you
+    are logged in as the account <code>arctic-install</code> created rather
+    than root - without it, <code>iw scan</code> failing with "Operation not
+    permitted" looked exactly like "no networks found - move closer, or
+    check the antenna," a permissions error diagnosed as a range problem.</p>
+    <p>If the install itself happened over wireless, that connection carries
+    across to the installed system automatically: not to NetworkManager, but
+    to the same wpa_supplicant + udhcpc pairing <code>wifi-connect</code>
+    itself uses, driven by <code>rc.d/wifi</code> on every boot after -
+    handing it to NetworkManager instead would put two programs fighting
+    over the same radio. No manual reconnect needed after the first
+    reboot.</p>
   </section>
 
   <section>

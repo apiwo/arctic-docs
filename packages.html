@@ -41,11 +41,12 @@ alpm files vim            every file a package owns
 alpm owns /usr/bin/vim    which installed package owns a given file
 alpm fetch all            refresh the repository indexes over the network
 alpm upgrade              upgrade everything installed to the latest available
-alpm system upgrade       all of the above, plus the kernel, the bootloader
-                          and any pending fixes, in that order
-alpm system fix           corrections that no version change would carry</pre>
+alpm system get           the installed release, kernel and generation
+alpm system check         everything system upgrade would do — nothing applied
+alpm system upgrade       sync, upgrade packages and the kernel, update the
+                          bootloader, apply pending fixes, reconcile system.conf</pre>
 
-    <h3>alpm system fix</h3>
+    <h3>alpm system get / check / upgrade</h3>
     <p>Some corrections do not move a package version: a default that turned
     out to be harmful, a service file that was wrong, a script that failed on
     some machines. An upgrade cannot carry those, because there is no newer
@@ -55,12 +56,19 @@ alpm system fix           corrections that no version change would carry</pre>
     repository — the packages in it are <code>.alpmz</code> files like any
     other, so applying a fix is still an install and the system stays binary —
     with one extra file naming which correction rides in which package, how
-    much it matters, and what part of the system it touches.</p>
-<pre class="code">alpm system fix               everything pending
-alpm system fix bootloader    only what might explain a machine that will not boot
-alpm system fix kernel
-alpm system fix major         only the most serious
-alpm system fix bugfix        both fix levels, and none of the changes</pre>
+    much it matters, and what part of the system it touches.
+    <code>alpm system check</code> lists everything pending — package
+    upgrades and fix-repository corrections alike — without installing
+    anything; <code>alpm system upgrade</code> is what actually applies it,
+    together with the ordinary package upgrade and a
+    <code>system.conf</code> reconciliation, in one run.
+    <code>alpm system get</code> just answers "what is this machine" —
+    installed release, kernel, and which generation <code>arctic-rebuild</code>
+    left it on.</p>
+<pre class="code">alpm system check bootloader    only what might explain a machine that will not boot
+alpm system upgrade kernel
+alpm system upgrade major       only the most serious fixes
+alpm system upgrade bugfix      both fix levels, and none of the plain changes</pre>
     <p>Every pending fix is listed before anything is installed, and applied
     fixes are remembered, so one is offered once and never again.</p>
     <p>On a configured system, prefer editing
@@ -69,7 +77,9 @@ alpm system fix bugfix        both fix levels, and none of the changes</pre>
     <a href="/configure.html">declarative configuration</a> for why. Using
     alpm directly still works exactly as shown above; the difference is only
     that the next rebuild will remove anything installed this way that the
-    file does not also mention.</p>
+    file does not also mention. <code>alpm system upgrade</code> runs
+    <code>arctic-rebuild</code> itself at the end, so a package upgrade and a
+    declarative config change converge through the same command.</p>
   </section>
 
   <section>
@@ -124,7 +134,7 @@ alpm log                   what has been done, and which transactions are on dis
       <tr><td><code>extra</code></td><td>applications and general-purpose tools</td></tr>
       <tr><td><code>kernels</code></td><td>kernels, kernel headers, firmware</td></tr>
       <tr><td><code>profile</code></td><td>whole-environment meta packages — a desktop, an audio stack, in one name</td></tr>
-      <tr><td><code>fix</code></td><td>corrections that no version change would carry — see <code>alpm system fix</code></td></tr>
+      <tr><td><code>fix</code></td><td>corrections that no version change would carry — see <code>alpm system check</code></td></tr>
       <tr><td><code>big</code></td><td>packages past the mirror's file size limit: firmware, the toolchain</td></tr>
       <tr><td><code>nonfree</code>, <code>alt-nonfree</code>, <code>multilib</code></td><td>off by default; opt in explicitly</td></tr>
     </table>

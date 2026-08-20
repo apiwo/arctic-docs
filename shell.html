@@ -75,6 +75,19 @@ arctic-shell --network node</pre>
   </section>
 
   <section>
+    <h2>Recovering from a crashed session</h2>
+    <p>A session killed outright — <code>kill -9</code>, a host crash — takes
+    its bind mounts down with it; the exit trap that unmounts
+    <code>/dev</code>, <code>/proc</code> and <code>/sys</code> before
+    removing the environment only runs on a normal exit or a caught signal,
+    never a <code>-9</code>. Nothing needs to be found by hand: every
+    <code>arctic-shell</code> invocation sweeps the cache directory first, and
+    an environment that is still mounted with no live process holding its
+    lock file is unmounted (and, unless it was built with
+    <code>--keep</code>, removed) before the new one is even built.</p>
+  </section>
+
+  <section>
     <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
   </section>
 

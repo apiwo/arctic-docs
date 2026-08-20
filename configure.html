@@ -188,16 +188,46 @@ SYS_KEYMAP="us"</pre>
   </section>
 
   <section>
+    <h2>Networking, the graphics driver, microcode</h2>
+    <p>Same shape as <code>install.conf</code>'s
+    <code>A_NET</code>/<code>A_WIFI_*</code>/<code>A_GPU</code>/<code>A_MICROCODE</code>,
+    which only ever ran once, at install time — editing any of them
+    afterward used to do nothing, because nothing read them again. Now
+    reconciled by every <code>arctic-rebuild</code>:</p>
+    <pre class="code">SYS_NET_MODE="static"
+SYS_IP="192.168.1.50/24"
+SYS_GATEWAY="192.168.1.1"
+SYS_DNS="1.1.1.1 9.9.9.9"
+
+SYS_GPU="auto"
+SYS_MICROCODE="auto"</pre>
+    <p><code>SYS_NET_MODE</code> is <code>dhcp</code>, <code>static</code> or
+    <code>wifi</code> (with <code>SYS_WIFI_SSID</code>/<code>SYS_WIFI_PSK</code>);
+    a rebuild writes the same NetworkManager keyfile
+    <code>arctic-install</code> itself writes, only rewriting it when the
+    declared value actually differs from what is on disk — reconciling an
+    unchanged wifi password does not restart the link. Nothing here deletes
+    a profile in a different mode, so a machine can carry both a static
+    wired and a saved wifi profile the same way an install can.
+    <code>SYS_GPU</code>/<code>SYS_MICROCODE</code> left at <code>auto</code>
+    resolve through the same PCI-bus/cpuinfo detection install time uses and
+    fold the right packages into the ordinary install list — nvidia is the
+    one exception, left for a fresh install or <code>alpm-nvidia-configure</code>
+    run by hand, because switching it is a real change to what the kernel
+    loads and wants a reboot, not a package list a rebuild can just apply.</p>
+  </section>
+
+  <section>
     <h2>What is still not declarative</h2>
-    <p>Network configuration — which mode, wifi credentials, static
-    addressing — is still set once at install time from
-    <code>install.conf</code> and is not reconciled by
-    <code>arctic-rebuild</code>. Changing it on a running system means
-    editing the relevant files directly. There is also no concept of
-    "outputs" the way a Nix flake exposes reusable modules and packages for
-    other configurations to import: <code>system.conf</code> describes one
-    machine, not a library other machines pull from. Both are known gaps,
-    named here rather than implied to already work.</p>
+    <p><code>SYS_BOOTLOADER</code> is detected and reported when it does not
+    match what is actually running, not switched automatically — changing
+    bootloaders means reinstalling boot sectors on a disk that already has
+    data on it, which stays <code>arctic-boot-strap</code>, run by hand.
+    There is also no concept of "outputs" the way a Nix flake exposes
+    reusable modules and packages for other configurations to import:
+    <code>system.conf</code> describes one machine, not a library other
+    machines pull from. Both are known gaps, named here rather than implied
+    to already work.</p>
   </section>
 
   <section>
