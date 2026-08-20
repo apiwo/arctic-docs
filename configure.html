@@ -3,239 +3,138 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Declarative configuration — Arctic Linux docs</title>
+<title>Configuration - Arctic Linux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <nav class="topbar">
-  <div class="wrap" style="padding:0;">
-    <a href="https://arctic-linux.apiwow.net">main page</a>
-    <a href="https://pkg-arctic.apiwow.net">pkg</a>
-    <a href="https://ports-arctic.apiwow.net">ports</a>
-    <a href="https://arctic-docs.apiwow.net">docs</a>
-    <a href="https://arctic-releases.apiwow.net">releases</a>
-    <a href="https://github.com/apiwo/arctic-linux">github</a>
-    <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
-  </div>
+  <a href="https://arctic-linux.apiwow.net">main</a>
+  <a href="https://arctic-docs.apiwow.net">docs</a>
+  <a href="https://pkg-arctic.apiwow.net">packages</a>
+  <a href="https://ports-arctic.apiwow.net">ports</a>
+  <a href="https://github.com/apiwo/arctic-linux">github</a>
+  <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
 </nav>
 <div class="wrap">
-  <header class="hero" style="padding:28px 0 8px;">
-    <h1 style="font-size:32px;">Declarative configuration</h1>
-  </header>
+  <header class="hero"><h1>Configuration</h1></header>
 
   <section>
-    <h2>The idea</h2>
-    <p>A file describes the machine. A command makes the machine match the
-    file. That is the whole model, and it is the same one NixOS uses —
-    built here on top of an ordinary package manager rather than replacing
-    it with a new one.</p>
-    <pre class="code">/etc/arctic/system.conf     what the machine is
-arctic-rebuild               make it so</pre>
-    <p>You do not <code>alpm add</code> things onto a configured Arctic
-    system as the normal way of working. You add a line to the file and
-    rebuild. The difference is not stylistic: the file stays a complete,
-    accurate description of the machine at all times, which is what makes
-    rebuilding it identically elsewhere, diffing two points in time, or
-    rolling it back possible at all. An imperative history of "I ran this,
-    then I ran that" cannot be replayed or rolled back the same way a
-    declared end state can.</p>
+    <p>Six small files under <code>/etc/arctic/</code>, each with one job,
+    instead of one large file covering everything. Edit one, then run
+    <code>arctic-rebuild</code> to apply it.</p>
+    <table>
+      <tr><th>File</th><th>Covers</th></tr>
+      <tr><td><code>pkgs.conf</code></td><td>a mirror of what's explicitly installed - never hand-edited, never reconciled against</td></tr>
+      <tr><td><code>network.conf</code></td><td>saved wifi credentials, written by <code>wifi-connect</code></td></tr>
+      <tr><td><code>users.conf</code></td><td>declared accounts, additive only</td></tr>
+      <tr><td><code>services.conf</code></td><td>the enabled service list</td></tr>
+      <tr><td><code>hardware.conf</code></td><td>gpu, microcode, bootloader, boot timeout</td></tr>
+      <tr><td><code>identity.conf</code></td><td>hostname, timezone, locale, keymap</td></tr>
+    </table>
   </section>
 
   <section>
-    <h2>system.conf</h2>
-    <pre class="code">SYS_PACKAGES="
-	git
-	tmux
-	ripgrep
-	neovim
-"
+    <h2>The file format</h2>
+    <p>A bracketed block grammar, not shell - reading a value never
+    means <code>. file</code>-sourcing something a package or a service
+    wrote, which is a real quoting/injection risk once anything on the
+    machine writes into these automatically.</p>
+    <pre class="code">block.name[
+value one per line
+another value
+]
 
-SYS_SERVICES="
-	dbus
-	NetworkManager
-	sshd
-"</pre>
-    <p><strong>SYS_PACKAGES is the complete list</strong>, not a list of
-    things to add on top of whatever is already there. Deleting a name
-    removes that package on the next rebuild, along with anything that was
-    only ever installed as its dependency and is not needed by anything
-    else still listed.</p>
-    <p>Only <em>explicitly</em> installed packages belong in this list.
-    Dependencies are alpm's business to track — listing them yourself here
-    is both unnecessary (alpm already knows) and wrong (it would make them
-    look explicit, which changes what a later rebuild considers removable).</p>
-    <p><strong>SYS_SERVICES</strong> works the same way for what runs at
-    boot: the complete list of what should be enabled, not an addition to
-    whatever is currently enabled.</p>
+another.block[
+value
+]
+
+;;</pre>
+    <p>Every file ends in a lone <code>;;</code> line - a hard sentinel
+    a reader can check for, so a write interrupted partway through is
+    detectable rather than silently read as an empty, valid file.
+    <code>conf.lib</code> (sourced by <code>wifi-connect</code>,
+    <code>alpm</code>, and <code>arctic-rebuild</code>) provides
+    <code>conf_get</code>/<code>conf_get1</code>/<code>conf_set</code>/<code>conf_set1</code>
+    - the only supported way to read or write one of these files.</p>
+  </section>
+
+  <section>
+    <h2>pkgs.conf is a mirror, not a wishlist</h2>
+    <p><code>pkgs.arctic[]</code> is rewritten by <code>alpm</code> itself
+    after every <code>add</code>/<code>rem</code> to match exactly what's
+    explicitly installed right now. Nothing ever reconciles the machine
+    <em>to</em> this file - editing it by hand changes nothing, the next
+    <code>alpm add</code>/<code>rem</code> just overwrites the edit with
+    reality again.</p>
+    <p>This is deliberate, and the reason is a real incident: an earlier
+    design used a declared package list that a rebuild diffed against and
+    enforced, and a machine that had a couple of packages installed by
+    hand outside of that file had both silently removed the next time a
+    system upgrade ran its own reconciliation. Making the ledger a pure
+    mirror instead of a diff target removes that whole failure class
+    structurally, rather than trying to get the diffing logic more
+    careful.</p>
+    <p><code>pkg.save[]</code> is the opposite - a hand-maintained
+    protect-list. Anything named there refuses removal outright
+    (<code>alpm rem</code> included, and any orphan sweep), regardless of
+    why it was installed, unless overridden with <code>ALPM_FORCE=1</code>.</p>
+  </section>
+
+  <section>
+    <h2>network.conf</h2>
+    <p><code>wifi-connect</code> writes <code>wifi.ssid[]</code>,
+    <code>wifi.psk[]</code> and <code>wifi.iface[]</code> here on a
+    successful connect. <code>rc.d/wifi</code> reads it back on every
+    boot and reconnects in the background - see
+    <a href="/networking.html">networking</a>.</p>
+  </section>
+
+  <section>
+    <h2>users.conf, services.conf, hardware.conf, identity.conf</h2>
+    <p>These four are what <code>arctic-rebuild</code> actually
+    reconciles. <code>users.declared[]</code> holds one
+    <code>name:shell:groups</code> line per user - additive only, an
+    account that exists but isn't listed is left alone rather than
+    deleted. <code>services.enabled[]</code> is the full, authoritative
+    service list - a name removed from it gets disabled on the next
+    rebuild. <code>hw.gpu[]</code>/<code>hw.microcode[]</code> default to
+    <code>auto</code>, re-detecting from the PCI bus/cpuinfo every
+    rebuild rather than pinning whatever the machine had the day it was
+    set. <code>hw.bootloader[]</code> is reported on mismatch, never
+    switched automatically - that means reinstalling boot sectors, which
+    stays a manual step.</p>
+    <p>Every file that starts genuinely empty gets seeded from what the
+    machine already is on the first <code>arctic-rebuild</code>, rather
+    than being reconciled against as if empty meant "remove everything" -
+    an empty <code>services.conf</code> does not mean "disable every
+    service currently running."</p>
   </section>
 
   <section>
     <h2>arctic-rebuild</h2>
-    <pre class="code">arctic-rebuild            make the system match the config
-arctic-rebuild --dry-run  show what would change, change nothing</pre>
-    <p>A rebuild diffs the file against reality and closes the gap:</p>
-    <pre class="code">:: recorded generation 4
-:: reconciling against /etc/arctic/system.conf
-  + install: ripgrep fd
-  - remove: tmux
-  + enable services: sshd
-:: now on generation 5
-:: rebuild complete</pre>
-    <p>Removals go through <code>alpm rem -d</code>, so anything that was
-    only pulled in as tmux's dependency and is not needed elsewhere goes too
-    — while alpm's own protected-package list still refuses to remove the
-    base system no matter what the file happens to say, so a typo that
-    accidentally drops <code>glibc</code> from the list cannot actually take
-    the machine down.</p>
+    <pre class="code">arctic-rebuild             make the system match the declared files
+arctic-rebuild --dry-run   show what would change, do nothing</pre>
+    <p>Also finishes what a chroot install couldn't: activates any kernel
+    package still marked <code>-nomod</code>, and writes
+    <code>limine.conf</code>/<code>grub.cfg</code> from the real
+    <code>/etc/fstab</code>/<code>/etc/crypttab</code> - config only,
+    never the deploy command. Every successful run snapshots (on btrfs)
+    and records a generation, so a bad edit is one
+    <code>arctic rollback</code> away - see
+    <a href="/kernels.html">generations</a>.</p>
   </section>
 
-  <section>
-    <h2>The first rebuild does not remove everything</h2>
-    <p>An empty <code>system.conf</code>, read completely literally, would
-    mean "this machine should have no packages at all" — which is never
-    what an empty file actually means the first time you look at it.
-    Instead, the first rebuild on a machine where the file is empty (or does
-    not exist yet) <em>seeds</em> it from what is actually installed and
-    enabled right now, and changes nothing on that run. You end up with an
-    accurate starting file to edit from, rather than a destructive first
-    surprise.</p>
-    <p>After an install this has already happened once —
-    <code>arctic-install</code> writes <code>system.conf</code> from the
-    install itself, so the seeding behaviour mainly matters for a machine
-    that predates the declarative layer, or one where the file was deleted
-    by hand.</p>
-  </section>
-
-  <section>
-    <h2>Every rebuild is undoable</h2>
-    <p>A rebuild records a generation before it changes anything, and
-    another once it has succeeded. If an edit turns out to be wrong:</p>
-    <pre class="code">arctic rollback          go back one generation
-arctic rollback 3        go back to a specific one
-arctic diff 3 5          see exactly what changed between two</pre>
-    <p>And if the result will not even boot, the recent generations are
-    listed directly in the boot menu. Full detail in
-    <a href="/generations.html">generations and rollback</a> — this is the
-    part of the declarative model that actually makes editing
-    <code>system.conf</code> feel safe to do casually rather than something
-    you approach carefully.</p>
-  </section>
-
-  <section>
-    <h2>Services</h2>
-    <p>Services are declared once, in <code>SYS_SERVICES</code>, regardless
-    of which init is actually running on the machine. Arctic's own service
-    definitions live in <code>/etc/rc.d</code> as a handful of shell
-    variables per service, and are translated into OpenRC scripts, sysvinit
-    entries, runit run files or dinit service files as needed — see
-    <a href="/init.html">init systems</a> for exactly how that translation
-    works and what it does and does not cover yet.</p>
-    <p>Directly, without editing the file — useful for a quick one-off
-    change or for checking current state:</p>
-    <pre class="code">service list
-service enable sshd
-service disable sshd
-service start sshd
-service status sshd</pre>
-    <p><code>service enable</code> and the config file describe the same
-    underlying state. Enabling a service by hand marks it enabled right now,
-    but if <code>system.conf</code> does not also list it, the next rebuild
-    will read the file, see that service is not declared, and turn it back
-    off — because from the declarative system's point of view, an enabled
-    service the file does not mention is exactly the same kind of drift as
-    an installed package the file does not mention. This is intentional and
-    is the entire point of a declarative system, but it is worth knowing
-    about before it surprises you the first time a service you enabled by
-    hand quietly disappears on the next <code>arctic-rebuild</code>.</p>
-  </section>
-
-  <section>
-    <h2>System identity, users, and the nonfree flag</h2>
-    <p><code>system.conf</code> covers more than packages and services.
-    Hostname, timezone, locale and keymap are reconciled the same way
-    packages are — change the value, rebuild, it takes effect:</p>
-    <pre class="code">SYS_HOSTNAME="labbox"
-SYS_TZ="America/New_York"
-SYS_LOCALE="en_GB.UTF-8"
-SYS_KEYMAP="us"</pre>
-    <p>User accounts are declared too, one per line as
-    <code>name:shell:groups</code>, but deliberately not symmetrically
-    reconciled the way packages are: a declared user that does not exist
-    yet is created on the next rebuild, but an account that already exists
-    and is simply not listed is left alone rather than deleted.
-    Automatically removing a user's account and home directory because a
-    line was missing from a text file is a different order of consequence
-    than removing a package, and this tool does not take that action
-    without being asked more directly than an absent line — delete an
-    account yourself with <code>userdel</code> if that is really what you
-    want.</p>
-    <pre class="code">SYS_USERS="
-	ray:/bin/zsh:wheel,users,audio,video
-"</pre>
-    <p><code>SYS_ALLOW_NONFREE</code> gates the nonfree and alt-nonfree
-    repositories the same way <code>allowUnfree</code> gates nixpkgs —
-    <code>no</code> disables them (without uninstalling anything already
-    pulled from them), <code>yes</code> enables them for future installs.</p>
-    <p>And after every successful rebuild,
-    <code>/etc/arctic/system.lock</code> is written automatically: every
-    explicitly installed package pinned to the exact version and release
-    that is actually on the machine, the same reason a
-    <code>flake.lock</code> sits next to a <code>flake.nix</code>. It is a
-    record of what was actually applied, not something you edit — and,
-    honestly, not yet something a rebuild reads back to pin against
-    repository drift either. It exists today as an accurate record;
-    enforcing it is a reasonable next step, not yet done.</p>
-  </section>
-
-  <section>
-    <h2>Networking, the graphics driver, microcode</h2>
-    <p>Same shape as <code>install.conf</code>'s
-    <code>A_NET</code>/<code>A_WIFI_*</code>/<code>A_GPU</code>/<code>A_MICROCODE</code>,
-    which only ever ran once, at install time — editing any of them
-    afterward used to do nothing, because nothing read them again. Now
-    reconciled by every <code>arctic-rebuild</code>:</p>
-    <pre class="code">SYS_NET_MODE="static"
-SYS_IP="192.168.1.50/24"
-SYS_GATEWAY="192.168.1.1"
-SYS_DNS="1.1.1.1 9.9.9.9"
-
-SYS_GPU="auto"
-SYS_MICROCODE="auto"</pre>
-    <p><code>SYS_NET_MODE</code> is <code>dhcp</code>, <code>static</code> or
-    <code>wifi</code> (with <code>SYS_WIFI_SSID</code>/<code>SYS_WIFI_PSK</code>);
-    a rebuild writes the same NetworkManager keyfile
-    <code>arctic-install</code> itself writes, only rewriting it when the
-    declared value actually differs from what is on disk — reconciling an
-    unchanged wifi password does not restart the link. Nothing here deletes
-    a profile in a different mode, so a machine can carry both a static
-    wired and a saved wifi profile the same way an install can.
-    <code>SYS_GPU</code>/<code>SYS_MICROCODE</code> left at <code>auto</code>
-    resolve through the same PCI-bus/cpuinfo detection install time uses and
-    fold the right packages into the ordinary install list — nvidia is the
-    one exception, left for a fresh install or <code>alpm-nvidia-configure</code>
-    run by hand, because switching it is a real change to what the kernel
-    loads and wants a reboot, not a package list a rebuild can just apply.</p>
-  </section>
-
-  <section>
-    <h2>What is still not declarative</h2>
-    <p><code>SYS_BOOTLOADER</code> is detected and reported when it does not
-    match what is actually running, not switched automatically — changing
-    bootloaders means reinstalling boot sectors on a disk that already has
-    data on it, which stays <code>arctic-boot-strap</code>, run by hand.
-    There is also no concept of "outputs" the way a Nix flake exposes
-    reusable modules and packages for other configurations to import:
-    <code>system.conf</code> describes one machine, not a library other
-    machines pull from. Both are known gaps, named here rather than implied
-    to already work.</p>
-  </section>
-
-  <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
+  <section class="docnav">
+    More: <a href="/">arctic linux docs</a> ·
+    <a href="/install.html">install</a> ·
+    <a href="/packages.html">packages</a> ·
+    <a href="/kernels.html">kernels &amp; generations</a> ·
+    <a href="/networking.html">networking, desktops &amp; init</a> ·
+    <a href="/troubleshooting.html">troubleshooting &amp; reference</a>
   </section>
 
   <footer>
-    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>Arctic Linux - <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

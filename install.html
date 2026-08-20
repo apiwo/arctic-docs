@@ -3,306 +3,161 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Install — Arctic Linux docs</title>
+<title>Install - Arctic Linux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <nav class="topbar">
-  <div class="wrap" style="padding:0;">
-    <a href="https://arctic-linux.apiwow.net">main page</a>
-    <a href="https://pkg-arctic.apiwow.net">pkg</a>
-    <a href="https://ports-arctic.apiwow.net">ports</a>
-    <a href="https://arctic-docs.apiwow.net">docs</a>
-    <a href="https://arctic-releases.apiwow.net">releases</a>
-    <a href="https://github.com/apiwo/arctic-linux">github</a>
-    <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
-  </div>
+  <a href="https://arctic-linux.apiwow.net">main</a>
+  <a href="https://arctic-docs.apiwow.net">docs</a>
+  <a href="https://pkg-arctic.apiwow.net">packages</a>
+  <a href="https://ports-arctic.apiwow.net">ports</a>
+  <a href="https://github.com/apiwo/arctic-linux">github</a>
+  <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
 </nav>
 <div class="wrap">
-  <header class="hero" style="padding:28px 0 8px;">
-    <h1 style="font-size:32px;">Install</h1>
-  </header>
+  <header class="hero"><h1>Install</h1></header>
 
   <section>
-    <h2>One command</h2>
-    <p>Boot the ISO. Wired networking comes up on its own via DHCP; for
-    wireless, see <a href="/networking.html">networking</a> for the full
-    picture, but the short version:</p>
-    <pre class="code">wifi-connect</pre>
-    <p>It scans, lists what is in range, asks which interface and which
-    network, and takes the passphrase with the characters masked. If you
-    already know the network and want no questions:
-    <code>wifi-connect YOUR-NETWORK your-password</code>.</p>
-
-    <p>Then edit the config and run the installer:</p>
-    <pre class="code">nano /etc/arctic/install.conf
-arctic-install</pre>
-
-    <p>No menus, no prompts, no arguments — <code>arctic-install</code> takes
-    none. Which disk to use is something the config says, not something you
-    type on the command line; there is no mount point to pass in and keep in
-    sync by hand.</p>
-
-    <p><code>nano</code>, <code>vim</code> and <code>nvim</code> are all on
-    the ISO, along with JetBrains Mono and the Nerd Font symbol set so a
-    terminal with icons works from the installer onward. <code>vi</code> is
-    a symlink to <code>vim</code> — busybox ships its own minimal
-    <code>vi</code> applet, but Arctic's live image replaces that symlink
-    with the real editor rather than leaving both around under different
-    names.</p>
+    <p>No ISO, no guided installer. Boot any live Linux with
+    <code>tar</code>, <code>curl</code> or <code>wget</code>, and disk
+    tools - Arctic's own media is not needed for this step. The short
+    version is on the <a href="https://arctic-linux.apiwow.net">main
+    page</a>; this covers the parts that guide leaves out.</p>
   </section>
 
   <section>
-    <h2>Checked, then confirmed, then installed</h2>
-    <p>Before anything is written to disk, the whole config is validated in
-    one pass. Either:</p>
-    <pre class="code">Config file accepted
-  /etc/arctic/install.conf
-  disk           /dev/sda (whole disk - everything on it is destroyed)
-  filesystem     btrfs
-  kernel         Arctic-kernel
-  hostname       arctic
-  desktop        xfce
-
-Make these changes? [y/N]</pre>
-    <p>or, if something is wrong, the full list of it, all at once, and
-    nothing is touched:</p>
-    <pre class="code">Config file has errors
-  /etc/arctic/install.conf
-
-  A_ROOT_FS=reiserfs is not valid (try: ext4 ext3 ext2 btrfs xfs f2fs zfs)
-  A_SNAPSHOT=btrfs needs A_ROOT_FS=btrfs (this config has ext4)
-  A_ENCRYPT=y but A_ENCRYPT_PASS is empty
-
-Nothing has been changed. Fix the config and run arctic-install again.</pre>
-    <p>Every error is reported together rather than one per run. Warnings — a
-    setting that will work but is probably not what was meant — are shown
-    separately and do not block the install or the confirmation prompt.</p>
-    <p>To check a config without installing anything, skipping the prompt
-    entirely:</p>
-    <pre class="code">arctic-install -n</pre>
-    <p>or against a specific file:</p>
-    <pre class="code">arctic-install -n -c /path/to/some.conf</pre>
-    <p><code>-f</code> skips the confirmation prompt and installs
-    immediately once the config is accepted — for scripted installs where
-    there is nobody at the keyboard to answer it.</p>
-  </section>
-
-  <section>
-    <h2>Choosing a disk</h2>
-    <p>Two ways. Pick one — setting both is a validation error, since it
-    would be ambiguous which one wins.</p>
-
-    <h3>A whole disk</h3>
-    <p>Arctic partitions and formats it: an ESP plus root on UEFI, a
-    BIOS-boot partition plus root on legacy BIOS. Everything already on the
-    disk is destroyed.</p>
-    <pre class="code">A_DISK=/dev/sda
-A_ROOT_FS=btrfs</pre>
-    <p><code>A_DISK_RESERVE</code> leaves free space at the end of the disk
-    instead of giving all of it to root, for a partition to add later:</p>
-    <pre class="code">A_DISK_RESERVE=100G</pre>
-
-    <h3>Partitions you made yourself</h3>
-    <p>Partition with <code>cfdisk</code>, <code>sfdisk</code> or
-    <code>parted</code> first — all three are on the ISO — then point Arctic
-    at the results. Nothing is formatted unless you say so.</p>
-    <pre class="code">A_ROOT_PART=/dev/sda2
-A_BOOT_PART=/dev/sda1
-A_HOME_PART=/dev/sda3
-A_FORMAT=n</pre>
-    <p>With <code>A_FORMAT=n</code> Arctic mounts the partitions exactly as
-    they are and installs into whatever is already there — which is the way
-    to keep an existing <code>/home</code> across a reinstall of root. An
-    existing btrfs partition is detected by its filesystem type and its
-    <code>@</code> subvolume layout is mounted, rather than the raw top
-    level, so an install onto a btrfs root you made earlier lands correctly
-    without needing to know the subvolume ID yourself.</p>
-    <p>Setting <code>A_FORMAT=y</code> with existing partitions formats
-    them fresh but does not repartition — the sizes and boundaries you chose
-    stay exactly as they are.</p>
-  </section>
-
-  <section>
-    <h2>Filesystems</h2>
+    <h2>Partitioning</h2>
+    <p>By hand, with <code>fdisk</code>/<code>sfdisk</code>/<code>cfdisk</code>
+    or whatever the live environment gives you. What you need depends on
+    firmware and bootloader:</p>
     <table>
-      <tr><td><code>ext4</code></td><td>the default — boring and reliable</td></tr>
-      <tr><td><code>btrfs</code></td><td>subvolumes, snapshots, transparent compression</td></tr>
-      <tr><td><code>xfs</code></td><td>good with very large files</td></tr>
-      <tr><td><code>f2fs</code></td><td>tuned for flash storage</td></tr>
-      <tr><td><code>ext3</code>, <code>ext2</code></td><td>for when you specifically need an older format</td></tr>
-      <tr><td><code>zfs</code></td><td>needs an out-of-tree kernel module; least tested path in the installer</td></tr>
+      <tr><th>Layout</th><th>Partitions</th></tr>
+      <tr><td>UEFI + Limine</td><td>EFI System Partition (FAT32, ~512M) + root</td></tr>
+      <tr><td>BIOS + Limine</td><td>a small unformatted boot-stub partition (~1M, type <code>21686148-6449-6E6F-744E-656564454649</code>) + a FAT32 <code>/boot</code> (~512M, Limine's BIOS build has no ext4 reader) + root</td></tr>
+      <tr><td>BIOS + GRUB</td><td>a small unformatted BIOS boot partition (~1M, type <code>21686148-6449-6E6F-744E-656564454649</code>) + root - GPT disks need one, GRUB refuses to embed in a bare gap</td></tr>
     </table>
-    <p>btrfs gets four subvolumes by default: <code>@</code> for root,
-    <code>@home</code>, <code>@snapshots</code> and <code>@log</code> — a
-    snapshot of root then restores without pulling your home directory or
-    log history back with it. The list is <code>A_BTRFS_SUBVOLS</code>, so
-    it can be changed; recognised names get mounted at a fixed place each
-    (<code>@home</code> → <code>/home</code>, <code>@cache</code> →
-    <code>/var/cache</code>, and so on), anything else is still created but
-    left for <code>A_MOUNTS</code> to mount by hand. That split is also what
-    <code>A_SNAPSHOT=btrfs</code> depends on:</p>
-    <pre class="code">A_ROOT_FS=btrfs
-A_SNAPSHOT=btrfs
-A_BTRFS_OPTS="rw,noatime,compress=zstd:3,space_cache=v2"</pre>
-    <p>The mount options above are the defaults if you leave
-    <code>A_BTRFS_OPTS</code> unset — <code>zstd:3</code> compression is a
-    reasonable middle ground between size and CPU cost, and
-    <code>space_cache=v2</code> avoids a slow free-space rescan on every
-    mount that the v1 cache format is prone to.</p>
-    <p><code>A_BTRFS_NO_SNAPSHOT_CACHE=y</code> adds a fifth subvolume,
-    <code>@cache</code> → <code>/var/cache</code>, so package-manager and
-    browser cache churn does not bloat every root snapshot taken
-    afterward — shorthand for adding <code>@cache</code> to
-    <code>A_BTRFS_SUBVOLS</code> directly.</p>
+    <pre class="code">mkfs.ext4 /dev/sdX2
+mount /dev/sdX2 /mnt
+mkfs.fat -F32 /dev/sdX1
+mount --mkdir /dev/sdX1 /mnt/boot</pre>
+    <p>Root can be ext4, ext3, ext2, btrfs, xfs or f2fs - whatever the
+    live environment's <code>mkfs.*</code> tools support. For an
+    encrypted root, run <code>cryptsetup luksFormat</code> and
+    <code>cryptsetup open</code> before formatting, and write
+    <code>/etc/crypttab</code> by hand once chrooted in (a single
+    <code>cryptroot UUID=&lt;luks-uuid&gt; none luks</code> line) -
+    <code>arctic-mkinitramfs</code> reads it back to decide whether to
+    bundle <code>cryptsetup</code> into the initramfs.</p>
   </section>
 
   <section>
-    <h2>Encryption</h2>
-    <p>Full-disk LUKS2, applied under whichever filesystem you chose:</p>
-    <pre class="code">A_ENCRYPT=y
-A_ENCRYPT_PASS=your-passphrase</pre>
-    <p>An initramfs bundling cryptsetup and the dm-crypt kernel modules is
-    generated automatically for an encrypted install — Arctic's kernel
-    normally needs no initramfs at all, since storage and filesystem drivers
-    are built in rather than modular, but an encrypted root is the one case
-    where something has to run before <code>root=</code> means anything: the
-    passphrase prompt. That prompt appears at boot, before anything else,
-    reading <code>rd.luks.uuid=</code> off the kernel command line to find
-    the right volume.</p>
-    <p>Works with every filesystem choice except zfs, which encrypts itself
-    and would otherwise mean double encryption for no benefit.</p>
+    <h2>Extracting the tarball</h2>
+    <pre class="code">tar -xJf arctic-linux-def-tarball.tar.xz -C /mnt</pre>
+    <p>Two flavors: <code>def</code> (busybox init, the tested default)
+    and <code>openrc</code> (OpenRC already wired up as init instead).
+    Both bundle glibc, toybox, busybox, zsh, doas, e2fsprogs, and
+    <code>alpm</code> itself, pre-installed and ready to sync. Neither
+    bundles <code>arctic-base</code>, a kernel, or a bootloader - those
+    come from <code>alpm add</code> once repo indexes are synced.</p>
   </section>
 
   <section>
-    <h2>Everything else</h2>
-    <p>The shipped <code>install.conf</code> documents every setting inline,
-    all commented out with its default shown, organised into sections. The
-    <a href="/reference.html">full reference</a> lists every variable
-    alphabetically if you want the complete picture in one place; the
-    highlights:</p>
-    <table>
-      <tr><td><code>A_KERNEL</code></td><td>which kernel — see <a href="/kernels.html">kernels</a></td></tr>
-      <tr><td><code>A_INIT</code></td><td>PID 1 — see <a href="/init.html">init systems</a></td></tr>
-      <tr><td><code>A_DESKTOP</code>, <code>A_DM</code>, <code>A_AUDIO</code></td>
-          <td>see <a href="/desktops.html">desktops and audio</a></td></tr>
-      <tr><td><code>A_USER</code>, <code>A_USERPASS</code>, <code>A_ROOTPASS</code>, <code>A_LOCK_ROOT</code></td>
-          <td>accounts. root ships locked and stays locked with an empty <code>A_ROOTPASS</code>, and a user created with no <code>A_USERPASS</code> is locked too — so the install needs at least one of them, or an authorised ssh key, and refuses a config that gives none</td></tr>
-      <tr><td><code>A_SSH_KEYS</code>, <code>A_SSH_PASSWORD_AUTH</code></td>
-          <td>authorized_keys contents, and whether sshd still accepts a password too</td></tr>
-      <tr><td><code>A_NET</code>, <code>A_WIFI_SSID</code>, <code>A_IP</code>, <code>A_MAC_RANDOMIZE</code></td>
-          <td>see <a href="/networking.html">networking</a></td></tr>
-      <tr><td><code>A_HOSTNAME</code>, <code>A_TZ</code>, <code>A_LOCALE</code>, <code>A_KEYMAP</code>, <code>A_CONSOLE_FONT</code></td>
-          <td>the usual system identity settings</td></tr>
-      <tr><td><code>A_SWAP</code></td><td><code>none</code>, <code>file</code>, <code>partition</code></td></tr>
-      <tr><td><code>A_ZRAM</code>, <code>A_ZRAM_SIZE</code>, <code>A_ZRAM_ALGO</code></td>
-          <td>compressed swap in RAM, composes with A_SWAP rather than replacing it</td></tr>
-      <tr><td><code>A_PKGS</code>, <code>A_SETS</code>, <code>A_FONTS</code>, <code>A_SERVICES</code></td>
-          <td>extra things to install and enable — <code>A_SETS</code> is whole categories (<code>devel</code>, <code>net</code>, <code>media</code>, <code>office</code>, <code>virt</code>, <code>gaming</code>, <code>cli</code>) rather than package names one at a time</td></tr>
-      <tr><td><code>A_PKGIT</code></td><td>install pkgit alongside alpm</td></tr>
-      <tr><td><code>A_MOUNTS</code></td><td>extra fstab lines for storage beyond root/boot/home</td></tr>
-      <tr><td><code>A_HARDEN_TMP</code></td><td>adds noexec to the tmpfs /tmp is already mounted as</td></tr>
-      <tr><td><code>A_POST</code></td><td>shell commands run inside the new system once everything else is done</td></tr>
-      <tr><td><code>A_CHROOT_SHELL</code>, <code>A_REBOOT</code></td>
-          <td>drop into the finished system before showing the summary, or reboot straight into it</td></tr>
-    </table>
+    <h2>Bootstrapping alpm</h2>
+    <pre class="code">/mnt/usr/bin/alpm-strap /mnt</pre>
+    <p><code>alpm-strap</code>'s only job is syncing fresh repository
+    indexes into the extracted tree. It passes
+    <code>ALPM_CONF</code>/<code>ALPM_REPOD</code> explicitly rather than
+    relying on their defaults, because those default to host-absolute
+    paths - correct when a live Arctic session with real
+    <code>/etc/alpm</code> config is doing the installing, wrong here,
+    since whatever booted this could be any live Linux with no
+    <code>/etc/alpm</code> at all.</p>
   </section>
 
   <section>
-    <h2>What the installer does, in order</h2>
-    <p>Fetch every repository first, before touching the disk at all - not
-    something to run by hand beforehand any more. Validate the config, print
-    the summary above, and ask for confirmation. Partition (if
-    <code>A_DISK</code> was set) or mount the given partitions - unmounting
-    the target from wherever it's currently mounted first, so a retry after
-    a failed attempt doesn't hit <code>mke2fs</code> refusing to format a
-    device it thinks is still in use. Unpack the base system. Install the
-    chosen kernel and firmware. Install networking tools - this is not
-    optional; a machine with no path onto a network at all is treated the
-    same as one with no kernel. Install the init system if not busybox,
-    translating services for it. Install everything else the config asked
-    for — desktop, audio, extra packages, package sets, fonts. Create
-    accounts, write authorized_keys. Write <code>/etc/fstab</code> from the
-    real mount table plus <code>A_MOUNTS</code>. Set up swap and zram.
-    Install the bootloader — <code>A_BOOTLOADER</code> and the rest of the
-    boot section are read straight off the same config, so this needs
-    nothing further. Run <code>A_POST</code>. Seed
-    <code>/etc/arctic/system.conf</code> from what was just installed, and
-    record generation 1.</p>
-    <p>A step that fails prints the last lines of the install log along with
-    the error, not just a one-sentence reason, and unmounts everything under
-    the target before exiting - the next attempt starts clean rather than
-    needing <code>umount -R</code> run by hand first.</p>
-    <p>The fstab step is generated from <code>/proc/mounts</code> after
-    everything is mounted, not reconstructed from the config. Whatever the
-    install actually ended up with — including the case where formatting an
-    existing partition was skipped and the real filesystem type differs from
-    what was expected — is what gets recorded, with <code>UUID=</code> used
-    throughout so a disk enumerated in a different order on the next boot
-    does not break anything.</p>
-    <p>After the installer finishes, <code>system.conf</code> already
-    describes the machine accurately and generation 1 is the machine exactly
-    as installed — both of those already exist before the first
-    <code>arctic-rebuild</code> ever runs, which matters because it means
-    there is always something to compare against or roll back to, even on a
-    freshly installed system nobody has touched yet.</p>
+    <h2>fstab, before chroot</h2>
+    <pre class="code">ALPM_ROOT=/mnt ALPM_CONF=/mnt/etc/alpm/alpm.conf ALPM_REPOD=/mnt/etc/alpm/repos.d \
+  /mnt/usr/bin/alpm add genfstab
+/mnt/usr/bin/genfstab /mnt >> /mnt/etc/fstab</pre>
+    <p><code>genfstab</code> reads <code>/proc/mounts</code> from the
+    live environment's own view - it has to run before chroot, not after,
+    since a chroot has no view of the outer mount table without
+    <code>/proc</code> bind-mounted first. It writes <code>UUID=</code>,
+    never <code>PARTUUID=</code>: the initramfs resolves <code>root=</code>
+    with busybox <code>findfs</code>, which only understands
+    <code>LABEL=</code>/<code>UUID=</code>.</p>
   </section>
 
   <section>
-    <h2>Boot</h2>
-    <p>In <code>install.conf</code> this section is last, on purpose — by
-    the time these settings matter, everything above them has already
-    decided what there is to boot.</p>
-    <pre class="code">A_BOOT_FW=efi          # or bios; detected automatically if unset
-A_BOOTLOADER=limine    # or grub, for multi-booting alongside something that expects it
-A_BOOT_MOUNT=/boot/efi
-A_BOOT_TIMEOUT=3
-A_KERNEL_ARGS=""
-A_GENERATIONS=5</pre>
-    <p>Firmware detection reads <code>/sys/firmware/efi</code> — if that
-    directory exists, the machine booted UEFI and gets a FAT32 ESP; if it
-    does not, BIOS and a small unformatted BIOS-boot partition instead.</p>
-    <p><code>A_GENERATIONS</code> decides how many previous configurations
-    appear as separate entries in the boot menu, each bootable on its own —
-    see <a href="/generations.html">generations and rollback</a> for what
-    that actually does at boot time.</p>
+    <h2>Inside chroot</h2>
+    <pre class="code">/mnt/usr/bin/arctic-chroot /mnt</pre>
+    <p>Bind-mounts <code>/proc /sys /dev /run</code> and drops you into a
+    shell with a correct backspace (<code>stty erase ^?</code> is set
+    explicitly, since the target has no terminfo database yet to agree
+    with the terminal on what backspace even sends).</p>
+    <pre class="code">passwd
+adduser you
+alpm add arctic-base
+alpm add arctic-base-kernel
+alpm add limine
+arctic-mkinitramfs</pre>
+    <p>Swap <code>limine</code> for <code>grub</code> on a BIOS install
+    if you'd rather have GRUB. Swap <code>arctic-base-kernel</code> for
+    any other flavor - <code>alpm search kernel</code> lists them, see
+    <a href="/kernels.html">kernels</a>. <code>arctic-mkinitramfs</code>
+    only needs to run explicitly here because you're doing it from inside
+    a chroot rather than through a normal package upgrade, which triggers
+    it as a hook automatically afterward.</p>
+    <p>Exit the chroot when done (<code>exit</code> or Ctrl-D).</p>
   </section>
 
   <section>
-    <h2>After the install</h2>
-    <p>The bootloader goes in as part of the install — there is no second
-    command to run afterwards. It asks first, naming the partition it is about
-    to write to rather than the directory that partition happens to be mounted
-    on: <code>Install bootloader to partition "/dev/nvme0n1p1"? [Y/n]</code>.</p>
-    <p>If the graphics choice was <code>nvidia</code> or <code>nouveau</code>,
-    the driver is configured as well as installed — modprobe rules, the
-    blacklist for the other one, and a regenerated initramfs — and the
-    installer says <em>Reboot is needed to apply changes.</em> The running
-    kernel already bound a driver at boot and a module cannot replace one that
-    is currently driving the card.</p>
+    <h2>Finishing and the bootloader</h2>
+    <p>Back on the live environment, as root:</p>
+    <pre class="code">arctic-rebuild</pre>
+    <p>This activates any kernel package still marked <code>-nomod</code>
+    (a kernel installed from inside a chroot can't run its own
+    post-install hooks there - no running kernel to build an initramfs
+    against yet) and writes <code>limine.conf</code>/<code>grub.cfg</code>
+    from the real <code>/etc/fstab</code>/<code>/etc/crypttab</code> now
+    sitting on the target. It never runs the actual deploy command -
+    that's the one manual step left:</p>
+    <pre class="code"><span class="c"># BIOS, Limine</span>
+limine bios-install /dev/sdX
 
-    <p>Reboot (<code>A_REBOOT=y</code> does this automatically, no
-    prompt), or stay to poke around first with
-    <code>A_CHROOT_SHELL=y</code> — <code>/dev</code>, <code>/proc</code>
-    and <code>/sys</code> are bound into the new root for it, same as a real
-    boot would have them. On first boot the account created is ready, root
-    is locked if <code>A_ROOTPASS</code> was left empty (or
-    <code>A_LOCK_ROOT=y</code> was set), and the network mode chosen is
-    already configured. A config that sets no root password, no user
-    password and no ssh key does not get this far: it would produce a system
-    nobody could log into, which is a thing you find out at the first boot
-    with the medium already put away, so <code>arctic-install</code> stops at
-    the config check instead. From here, ongoing changes go through
-    <code>system.conf</code> — see
-    <a href="/configure.html">declarative configuration</a>.</p>
+<span class="c"># EFI, Limine - copy the binaries onto the mounted ESP, then register an entry</span>
+mkdir -p /mnt/boot/EFI/BOOT /mnt/boot/EFI/arctic
+cp /usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/BOOT/
+cp /usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/arctic/arcticx64.efi
+efibootmgr --create --disk /dev/sdX --part 1 \
+  --loader '\EFI\arctic\arcticx64.efi' --label 'Arctic linux'
+
+<span class="c"># BIOS, GRUB</span>
+grub-install --target=i386-pc --boot-directory=/mnt/boot /dev/sdX</pre>
+    <p>Reboot.</p>
   </section>
 
   <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
+    <h2>Repairing an existing install</h2>
+    <p>Mount the root partition (and boot partition, if separate) under
+    <code>/mnt</code>, then <code>/mnt/usr/bin/arctic-chroot /mnt</code> - the
+    same tool used during install works identically afterward. Re-run
+    <code>arctic-rebuild</code> from outside the chroot to fix a stale
+    bootloader config or reactivate a kernel.</p>
+  </section>
+
+  <section class="docnav">
+    More: <a href="/">arctic linux docs</a> ·
+    <a href="/configure.html">configuration</a> ·
+    <a href="/packages.html">packages</a> ·
+    <a href="/kernels.html">kernels &amp; generations</a> ·
+    <a href="/networking.html">networking, desktops &amp; init</a> ·
+    <a href="/troubleshooting.html">troubleshooting &amp; reference</a>
   </section>
 
   <footer>
-    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>Arctic Linux - <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

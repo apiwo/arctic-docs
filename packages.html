@@ -3,34 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Packages (alpm) — Arctic Linux docs</title>
+<title>Packages (alpm) - Arctic Linux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <nav class="topbar">
-  <div class="wrap" style="padding:0;">
-    <a href="https://arctic-linux.apiwow.net">main page</a>
-    <a href="https://pkg-arctic.apiwow.net">pkg</a>
-    <a href="https://ports-arctic.apiwow.net">ports</a>
-    <a href="https://arctic-docs.apiwow.net">docs</a>
-    <a href="https://arctic-releases.apiwow.net">releases</a>
-    <a href="https://github.com/apiwo/arctic-linux">github</a>
-    <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
-  </div>
+  <a href="https://arctic-linux.apiwow.net">main</a>
+  <a href="https://arctic-docs.apiwow.net">docs</a>
+  <a href="https://pkg-arctic.apiwow.net">packages</a>
+  <a href="https://ports-arctic.apiwow.net">ports</a>
+  <a href="https://github.com/apiwo/arctic-linux">github</a>
+  <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
 </nav>
 <div class="wrap">
-  <header class="hero" style="padding:28px 0 8px;">
-    <h1 style="font-size:32px;">Packages (alpm)</h1>
-  </header>
+  <header class="hero"><h1>Packages (alpm)</h1></header>
 
   <section>
     <h2>alpm</h2>
     <p>Arctic's package manager, written specifically for this
-    distribution. Binary packages are <code>.alpmz</code> files — a plain
-    tar.xz archive containing a <code>.PKGINFO</code> metadata block, a
-    <code>.FILES</code> manifest, and the actual payload rooted at
-    <code>/</code>, so installing one is close to literally unpacking a
-    tarball with bookkeeping on top.</p>
+    distribution. Binary packages are <code>.alpmz</code> files - a plain
+    tar.xz archive holding a <code>.PKGINFO</code> metadata block, a
+    <code>.FILES</code> manifest, and the payload rooted at
+    <code>/</code>.</p>
     <pre class="code">alpm add vim              install
 alpm rem vim              remove
 alpm rem -d vim         remove, and anything only it needed as a dependency
@@ -42,87 +36,64 @@ alpm owns /usr/bin/vim    which installed package owns a given file
 alpm fetch all            refresh the repository indexes over the network
 alpm upgrade              upgrade everything installed to the latest available
 alpm system get           the installed release, kernel and generation
-alpm system check         everything system upgrade would do — nothing applied
-alpm system upgrade       sync, upgrade packages and the kernel, update the
-                          bootloader, apply pending fixes, reconcile system.conf</pre>
+alpm system check         everything system upgrade would do - nothing applied
+alpm system upgrade       sync, upgrade packages and the kernel, apply pending
+                          fixes, reconcile the declarative config files</pre>
+    <p>Every <code>add</code>/<code>rem</code> updates
+    <code>pkgs.conf</code>'s mirror automatically - see
+    <a href="/configure.html">configuration</a>. There's no separate
+    declarative package list to keep in sync; plain <code>alpm add</code>
+    is the normal, correct way to manage packages.</p>
 
     <h3>alpm system get / check / upgrade</h3>
-    <p>Some corrections do not move a package version: a default that turned
-    out to be harmful, a service file that was wrong, a script that failed on
-    some machines. An upgrade cannot carry those, because there is no newer
-    version to upgrade <em>to</em>, and before this the only way one reached
-    an installed machine was reinstalling it.</p>
-    <p>The fix repository is where they live. It is an ordinary binary
-    repository — the packages in it are <code>.alpmz</code> files like any
-    other, so applying a fix is still an install and the system stays binary —
-    with one extra file naming which correction rides in which package, how
-    much it matters, and what part of the system it touches.
-    <code>alpm system check</code> lists everything pending — package
-    upgrades and fix-repository corrections alike — without installing
-    anything; <code>alpm system upgrade</code> is what actually applies it,
-    together with the ordinary package upgrade and a
-    <code>system.conf</code> reconciliation, in one run.
-    <code>alpm system get</code> just answers "what is this machine" —
-    installed release, kernel, and which generation <code>arctic-rebuild</code>
-    left it on.</p>
-<pre class="code">alpm system check bootloader    only what might explain a machine that will not boot
+    <p>Some corrections don't move a package version: a default that
+    turned out to be harmful, a service file that was wrong, a script
+    that failed on some machines. An upgrade can't carry those, since
+    there's no newer version to upgrade <em>to</em>. The fix repository
+    is where they live - an ordinary binary repository, so applying a
+    fix is still an install and the system stays binary, with one extra
+    file naming which correction rides in which package.</p>
+    <pre class="code">alpm system check bootloader    only what might explain a machine that will not boot
 alpm system upgrade kernel
 alpm system upgrade major       only the most serious fixes
 alpm system upgrade bugfix      both fix levels, and none of the plain changes</pre>
-    <p>Every pending fix is listed before anything is installed, and applied
-    fixes are remembered, so one is offered once and never again.</p>
-    <p>On a configured system, prefer editing
-    <code>system.conf</code> and running <code>arctic-rebuild</code> over
-    calling <code>alpm add</code> directly — see
-    <a href="/configure.html">declarative configuration</a> for why. Using
-    alpm directly still works exactly as shown above; the difference is only
-    that the next rebuild will remove anything installed this way that the
-    file does not also mention. <code>alpm system upgrade</code> runs
-    <code>arctic-rebuild</code> itself at the end, so a package upgrade and a
-    declarative config change converge through the same command.</p>
+    <p>Every pending fix is listed before anything installs, and applied
+    fixes are remembered, so one is offered once and never again.
+    <code>alpm system upgrade</code> runs <code>arctic-rebuild</code>
+    itself at the end, so a package upgrade and a config change converge
+    through one command.</p>
   </section>
 
   <section>
     <h2>Building from source</h2>
-    <p>Not every package has a binary built for it. When one does not, alpm
-    offers to build it on the spot rather than simply failing. This needs a
-    compiler, which means the <code>llvm</code> package — clang and lld — and
-    until it was built there was nothing on an installed machine to compile
-    with and <code>alpm add -s</code> stopped with
-    <code>missing: clang ld.lld</code>:</p>
+    <p>Not every package has a binary built for it. When one doesn't,
+    alpm offers to build it on the spot.</p>
     <pre class="code">alpm add -s some-package    build from the port, even when a binary also exists
 alpm build recipe           build a specific recipe file into an .alpmz directly</pre>
-    <p>Recipes come from the ports tree, which is a separate host from the
-    binary mirror and is never one of the repositories in
-    <code>/etc/alpm/repos.d</code>. alpm reaches it through
-    <code>ALPM_PORTS</code>, so "what can be installed" and "what can be
-    compiled" are never the same list.</p>
+    <p>Recipes come from the ports tree, a separate host from the binary
+    mirror, reached through <code>ALPM_PORTS</code> - never one of the
+    repositories in <code>/etc/alpm/repos.d</code>.</p>
   </section>
 
   <section>
     <h2>Undoing a transaction</h2>
-    <p>Every install and removal is a transaction, and
-    <code>alpm rollback</code> undoes one — the files it replaced go back,
-    the files it added are removed, and the package database returns to what
-    it described beforehand. A rolled-back install loses its database entry
-    entirely; a rolled-back upgrade gets the previous version's entry back.</p>
     <pre class="code">alpm rollback              undo the most recent transaction
 alpm rollback 20260815-111525    undo a specific one
 alpm log                   what has been done, and which transactions are on disk</pre>
-    <p>On a btrfs root alpm also takes a filesystem snapshot before each
-    transaction, which catches anything a package's install script did on
-    its own — separate from the file-level rollback above.</p>
+    <p>On a btrfs root alpm also takes a filesystem snapshot before every
+    transaction, catching anything a package's install script did on its
+    own - separate from file-level rollback.</p>
   </section>
 
   <section>
-    <h2>How installs are reported</h2>
-    <p><code>ALPM_STYLE</code> in <code>/etc/alpm/alpm.conf</code> chooses
-    the wording and layout. The resolver, the downloads and the progress are
-    identical in all three; only the presentation changes.</p>
+    <h2>Reporting style</h2>
+    <p><code>ALPM_STYLE</code> in <code>/etc/alpm/alpm.conf</code>
+    chooses the wording and layout. The resolver, downloads and progress
+    are identical in all three.</p>
     <table>
-      <tr><td><code>arctic</code></td><td>the default — <code>::</code> headings, a line per dependency</td></tr>
-      <tr><td><code>apt</code></td><td>Debian's shape: <code>Reading package lists...</code>, a NEW-packages block, <code>Get:1 &lt;url&gt; [size]</code>, <code>Setting up &lt;pkg&gt; (&lt;version&gt;) ...</code></td></tr>
-      <tr><td><code>aeryn</code></td><td>Aeryn OS's shape: a boxed, columnar transaction summary</td></tr>
+      <tr><td><code>arctic</code></td><td>the default - <code>::</code> headings, a line per dependency</td></tr>
+      <tr><td><code>apt</code></td><td>Debian's shape</td></tr>
+      <tr><td><code>aeryn</code></td><td>Aeryn OS's shape - a boxed, columnar transaction summary</td></tr>
     </table>
   </section>
 
@@ -133,124 +104,72 @@ alpm log                   what has been done, and which transactions are on dis
       <tr><td><code>base</code></td><td>desktops, X11, Wayland, and other larger stacks</td></tr>
       <tr><td><code>extra</code></td><td>applications and general-purpose tools</td></tr>
       <tr><td><code>kernels</code></td><td>kernels, kernel headers, firmware</td></tr>
-      <tr><td><code>profile</code></td><td>whole-environment meta packages — a desktop, an audio stack, in one name</td></tr>
-      <tr><td><code>fix</code></td><td>corrections that no version change would carry — see <code>alpm system check</code></td></tr>
+      <tr><td><code>profile</code></td><td>whole-environment meta packages - a desktop, an audio stack, in one name</td></tr>
+      <tr><td><code>fix</code></td><td>corrections that no version change would carry</td></tr>
       <tr><td><code>big</code></td><td>packages past the mirror's file size limit: firmware, the toolchain</td></tr>
       <tr><td><code>nonfree</code>, <code>alt-nonfree</code>, <code>multilib</code></td><td>off by default; opt in explicitly</td></tr>
     </table>
-    <p>Every one of these serves <code>.alpmz</code> binaries and nothing
-    else. There is no "source" repository: a repository holds built packages,
-    the ports tree holds recipes, and the two live on separate hosts —
-    <a href="https://github.com/apiwo/arctic-linux-pkgs">arctic-linux-pkgs</a>,
-    served over <code>raw.githubusercontent.com</code>, and
-    <a href="https://ports-arctic.apiwow.net">ports-arctic.apiwow.net</a>.
-    Each index is generated from what the mirror actually holds, so a
-    repository cannot advertise a package it cannot serve.</p>
     <p>Configured per repository in <code>/etc/alpm/repos.d/*.repo</code>:</p>
     <pre class="code">name = main
 url = https://raw.githubusercontent.com/apiwo/arctic-linux-pkgs/main/ALL/main
 enabled = yes
 priority = 10
 sig = optional</pre>
-    <p>Browse the actual contents at
+    <p>Browse contents at
     <a href="https://github.com/apiwo/arctic-linux-pkgs">arctic-linux-pkgs</a>
-    and the recipes at
+    and recipes at
     <a href="https://ports-arctic.apiwow.net">ports-arctic.apiwow.net</a>.</p>
-    <p>A package of 100 MiB or more cannot be served from a git mirror at all,
-    and the ones that cross that line are not optional extras:
-    <code>linux-firmware</code> is 162 MiB and the packaged toolchain is
-    148 MiB. Those are release assets, and the <code>big</code> repository is
-    how alpm reaches them — its index sits in the tree with all the others,
-    and a <code>pkgurl</code> line points the package files somewhere else:</p>
-    <pre class="code">name = big
-url = https://raw.githubusercontent.com/apiwo/arctic-linux-pkgs/main/ALL/big
-pkgurl = https://github.com/apiwo/arctic-linux-pkgs/releases/download/pkgs-x86_64
-enabled = yes
-priority = 25</pre>
-    <p>Nothing about installing one of them is different:
-    <code>alpm add linux-firmware</code>.</p>
   </section>
 
   <section>
     <h2>Signatures</h2>
     <p>Every index is signed with <a href="https://man.openbsd.org/signify">signify</a>
-    — OpenBSD's tool, Ed25519, one line of public key. No key server, no web
-    of trust, and no GPG anywhere near the base system.</p>
-    <p>The index is worth signing because of what it is: it says which
-    packages exist, where they are and what they hash to. A forged one hands
-    a machine any package at all, and the per-package checksum alpm verifies
-    afterwards is taken from that same forged file — so whoever can answer
-    for the mirror can serve a matching <code>INDEX.sha256</code> beside it.
-    A signature is the repository's own word instead of the connection's.</p>
-    <p>The public key arrives with <code>arctic-base</code>, in
-    <code>/etc/alpm/keys</code>, so it is on the machine before its first
-    fetch rather than being downloaded alongside what it is meant to verify.
-    Every <code>.pub</code> file there is tried, which is what makes rotating
-    a key possible: ship the new one beside the old, and drop the old once
-    the repositories have moved over.</p>
-    <p>How much a signature matters is per repository:</p>
+    - Ed25519, one line of public key, no GPG anywhere near the base
+    system. The public key arrives with <code>arctic-base</code>, in
+    <code>/etc/alpm/keys</code>, before the first fetch.</p>
     <pre class="code">sig = required   an index without a good signature is not used
 sig = optional   checked when it can be, said out loud when it cannot (default)
 sig = off        not checked at all</pre>
-    <p>A signature that does not match is refused under all three — a bad
-    signature is not a missing one. Only a missing signature is tolerated,
-    and only while the installation image is still built without signify on
-    it; an installed system has both the verifier and the key, so its
-    repositories can be set to <code>required</code>.</p>
-    <pre class="code">alpm fetch all
-  -> fix            unsigned
-     the signature does not match any key in /etc/alpm/keys</pre>
   </section>
 
   <section>
-    <h2>Snapshots and rollback (package level)</h2>
-    <p>On btrfs, alpm snapshots the filesystem before every install or
-    removal:</p>
-    <pre class="code">alpm log                  every transaction, in order
-alpm rollback              undo the most recent one
-arctic snapshots           list them via the arctic umbrella command</pre>
-    <p>This is a separate mechanism from generations, which record declared
-    configuration rather than raw filesystem state — see
-    <a href="/generations.html">generations</a> for when you would reach for
-    one over the other.</p>
+    <h2>Ephemeral shells</h2>
+    <pre class="code">arctic-shell git tmux ripgrep       a throwaway environment with those packages
+arctic-shell --network curl         with network access
+arctic-shell --keep vim -- vim x    build it, keep it after you exit
+arctic gc                           clean up the package cache and unused environments</pre>
+    <p>Content-addressed by package set, so the same request reuses a
+    previous build instead of rebuilding it. Every invocation also sweeps
+    for an environment left mounted by a session that was killed outright
+    - unmounted, and removed unless it was built <code>--keep</code>.</p>
   </section>
 
   <section>
     <h2>Ports</h2>
-    <p>Every package in the repositories is generated from a single line in
-    <code>ports/manifest.tsv</code>:</p>
+    <p>Every package in the repositories is generated from a single line
+    in <code>ports/manifest.tsv</code>:</p>
     <pre class="code">repo  name  version  buildsys  license  depends  makedepends  url  source  desc</pre>
-    <p><code>gen-ports.py</code> turns each row into a recipe using a
-    template matched to the declared build system (autotools, cmake, meson,
-    make, cargo, and so on). A package that needs something the template
-    genuinely cannot express gets a hand-written recipe instead, with a
-    <code>recipe.local</code> marker file placed beside it — that marker is
-    what stops the next manifest-driven regeneration from silently
-    overwriting the hand work, which happened more than once before the
-    marker convention existed and is why it exists now.</p>
+    <p><code>gen-ports.py</code> turns each row into a recipe matched to
+    the declared build system. A package that needs something the
+    template can't express gets a hand-written recipe with a
+    <code>recipe.local</code> marker beside it, which stops the next
+    manifest-driven regeneration from overwriting the hand work.</p>
     <p>Package and recipe changes go to
     <a href="https://github.com/apiwo/arctic-linux-ports">arctic-linux-ports</a>,
-    not the main <code>arctic-linux</code> repository — edit the manifest
-    there, not a generated recipe directly, unless it is one of the
-    hand-written exceptions.</p>
+    not the main <code>arctic-linux</code> repository.</p>
   </section>
 
-  <section>
-    <h2>pkgit</h2>
-    <p>pkgit can be installed alongside alpm:</p>
-    <pre class="code">A_PKGIT=y</pre>
-    <p>alpm remains what the system itself is built, packaged and managed
-    with — the declarative layer, the ports build pipeline, and the ISO
-    itself all assume alpm specifically. This setting only adds pkgit next
-    to it as an additional tool, not a replacement.</p>
-  </section>
-
-  <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
+  <section class="docnav">
+    More: <a href="/">arctic linux docs</a> ·
+    <a href="/install.html">install</a> ·
+    <a href="/configure.html">configuration</a> ·
+    <a href="/kernels.html">kernels &amp; generations</a> ·
+    <a href="/networking.html">networking, desktops &amp; init</a> ·
+    <a href="/troubleshooting.html">troubleshooting &amp; reference</a>
   </section>
 
   <footer>
-    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>Arctic Linux - <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

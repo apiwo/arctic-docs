@@ -3,197 +3,132 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kernels — Arctic Linux docs</title>
+<title>Kernels &amp; generations - Arctic Linux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <nav class="topbar">
-  <div class="wrap" style="padding:0;">
-    <a href="https://arctic-linux.apiwow.net">main page</a>
-    <a href="https://pkg-arctic.apiwow.net">pkg</a>
-    <a href="https://ports-arctic.apiwow.net">ports</a>
-    <a href="https://arctic-docs.apiwow.net">docs</a>
-    <a href="https://arctic-releases.apiwow.net">releases</a>
-    <a href="https://github.com/apiwo/arctic-linux">github</a>
-    <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
-  </div>
+  <a href="https://arctic-linux.apiwow.net">main</a>
+  <a href="https://arctic-docs.apiwow.net">docs</a>
+  <a href="https://pkg-arctic.apiwow.net">packages</a>
+  <a href="https://ports-arctic.apiwow.net">ports</a>
+  <a href="https://github.com/apiwo/arctic-linux">github</a>
+  <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
 </nav>
 <div class="wrap">
-  <header class="hero" style="padding:28px 0 8px;">
-    <h1 style="font-size:32px;">Kernels</h1>
-  </header>
+  <header class="hero"><h1>Kernels &amp; generations</h1></header>
 
   <section>
-    <h2>Choosing one</h2>
-    <pre class="code">A_KERNEL=Arctic-base-kernel</pre>
+    <h2>Choosing a kernel</h2>
+    <pre class="code">alpm add arctic-base-kernel</pre>
     <table>
-      <tr><td><code>Arctic-base-kernel</code></td>
+      <tr><td><code>arctic-base-kernel</code></td>
           <td>the default. Linux 7.1.3, broad hardware support, most drivers as modules.</td></tr>
-      <tr><td><code>Arctic-kernel</code></td>
+      <tr><td><code>arctic-kernel</code></td>
           <td>Linux 6.12 LTS with the ZEN patchset merged on top. See below.</td></tr>
-      <tr><td><code>Arctic-libre-kernel</code></td>
+      <tr><td><code>arctic-libre-kernel</code></td>
           <td>no binary blob loading paths, no nonfree microcode.</td></tr>
-      <tr><td><code>Arctic-small-kernel</code></td>
+      <tr><td><code>arctic-small-kernel</code></td>
           <td>monolithic: no module loader at all, so no initramfs is needed either. Fast boot, fixed hardware.</td></tr>
-      <tr><td><code>Arctic-rt-kernel</code></td>
+      <tr><td><code>arctic-rt-kernel</code></td>
           <td>realtime preemption.</td></tr>
-      <tr><td><code>Arctic-hardened-kernel</code></td>
+      <tr><td><code>arctic-hardened-kernel</code></td>
           <td>hardening-focused config options turned up.</td></tr>
     </table>
     <p>More than one kernel can be installed on the same machine at once;
-    the bootloader gets a separate entry for each. This is exactly the same
-    mechanism generations use for a different purpose — see
-    <a href="/generations.html">generations</a>.</p>
+    the bootloader gets a separate entry for each - the same mechanism
+    generations use, below, for a different purpose.</p>
   </section>
 
   <section>
-    <h2>Arctic-kernel: a real fork, not a config change</h2>
+    <h2>arctic-kernel: a real fork, not a config change</h2>
     <p>Source at
     <a href="https://github.com/apiwo/arctic-kernel">github.com/apiwo/arctic-kernel</a>.
     Linux 6.12 LTS with the
     <a href="https://github.com/zen-kernel/zen-kernel">ZEN</a> patchset
-    merged directly into the tree, plus one small Arctic-authored patch on
-    top of that.</p>
-    <p>What the ZEN merge brings:</p>
+    merged directly into the tree, plus one small Arctic-authored patch
+    on top.</p>
     <ul>
-      <li>PDS and BMQ alternate CPU schedulers, available but not enabled by
-      default — see below</li>
-      <li>PCIe ACS override, useful for splitting IOMMU groups when passing a
-      GPU through to a VM</li>
-      <li><code>ntsync</code> — the Wine/Proton synchronisation primitives
-      backport</li>
-      <li><code>vhba</code> — a virtual SCSI host adapter, used for CD/DVD
-      image emulation</li>
-      <li>inlined futex fast paths, and assorted scheduler/TCP/cpufreq
-      tuning from the ZEN tree</li>
+      <li>PDS and BMQ alternate CPU schedulers, available but not enabled by default</li>
+      <li>PCIe ACS override, useful for splitting IOMMU groups when passing a GPU through to a VM</li>
+      <li><code>ntsync</code> - the Wine/Proton synchronisation primitives backport</li>
+      <li><code>vhba</code> - a virtual SCSI host adapter, used for CD/DVD image emulation</li>
+      <li>inlined futex fast paths, and assorted scheduler/TCP/cpufreq tuning from the ZEN tree</li>
     </ul>
-    <p>The Arctic-authored patch on top raises the default readahead window
-    to 512 KiB.</p>
+    <p>The Arctic-authored patch raises the default readahead window to
+    512 KiB.</p>
+    <p>ZEN is maintained against a moving 6.12 point-release line; this
+    fork pinned to 6.12.100 after the patchset itself had drifted through
+    83 upstream point releases since the patches were originally written.
+    One hunk genuinely did not apply cleanly and was dropped rather than
+    forced - ZEN's AMD INVLPGB broadcast-TLB-flush backport conflicted
+    with upstream changes in a way that risked subtle TLB invalidation
+    bugs - recorded in the repository's <code>PATCHES.md</code> rather
+    than silently skipped.</p>
   </section>
 
   <section>
-    <h2>What it took to merge</h2>
-    <p>ZEN is maintained against a moving 6.12 point-release line, and this
-    fork pinned to a specific one (6.12.100) after the ZEN patchset itself
-    had drifted through 83 upstream point releases (6.12.17 through
-    6.12.100) since the patches were originally written. Reconciling that
-    gap by hand — not just re-running <code>patch</code> and hoping — is
-    written down honestly in the repository's <code>PATCHES.md</code>,
-    including the one hunk that genuinely did not apply cleanly and was
-    dropped rather than forced: ZEN's AMD INVLPGB broadcast-TLB-flush
-    backport in <code>arch/x86/mm/tlb.c</code> conflicted with upstream
-    changes in a way that could not be resolved without risking subtle
-    correctness bugs in TLB invalidation, so it was left out and the reason
-    recorded rather than silently skipped.</p>
-    <p>Real build verification caught problems that inspection of the diff
-    alone would have missed — a dangling <code>goto</code> label left behind
-    from a partially dropped hunk, and a stale function-argument mismatch in
-    a wholesale-new ZEN file (<code>alt_core.c</code>) that no shipped
-    config even exercised, so it would have sat there silently broken until
-    someone actually enabled <code>CONFIG_SCHED_ALT</code>. Both were found
-    by actually compiling the tree, not by reading the patch.</p>
+    <h2>What a generation is</h2>
+    <p>A complete, self-contained record of what the system was declared
+    to be at one moment: the six config files, the explicit package set
+    with exact versions, enabled services, and which kernel was in use.
+    Every <code>arctic-rebuild</code> writes one before it changes
+    anything, and another once it has succeeded - so a rebuild that fails
+    partway through still leaves a clean "before" record.</p>
+    <pre class="code">arctic generations
+
+GEN   DATE                 PACKAGES SERVICES  DESCRIPTION
+*5    2026-08-01 14:02:11  84       7         rebuild
+ 4    2026-08-01 14:02:03  82       6         before rebuild
+ 3    2026-07-31 09:14:55  82       6         rebuild
+ 2    2026-07-31 09:14:48  79       6         before rebuild
+ 1    2026-07-30 22:41:02  79       6         initial install
+
+* = current</pre>
   </section>
 
   <section>
-    <h2>The alternate scheduler</h2>
-    <p>PDS and BMQ are compiled in and selectable
-    (<code>CONFIG_SCHED_ALT</code>), but are not the default in any config
-    Arctic ships — the mainline CFS-derived scheduler remains what actually
-    runs unless you deliberately build a kernel with the alt scheduler
-    enabled yourself. This is a conservative choice: PDS/BMQ have real
-    advocates for interactive/desktop workloads, but making an alternate
-    scheduler the silent default on a distribution most people will run
-    unmodified is a bigger claim than "the code is there if you want it".</p>
+    <h2>Rolling back</h2>
+    <pre class="code">arctic rollback            go back one generation
+arctic rollback 3          go back to generation 3 specifically
+arctic diff 3 5            what changed between them
+arctic-generation show 3   everything generation 3 recorded</pre>
+    <p>Rolling back restores that generation's config and reconciles the
+    running machine to it - the same reconciling operation an ordinary
+    rebuild performs, against an older set of files instead of the
+    current one. Switching to a generation is itself recorded as a new
+    generation first, so a rollback is also undoable.</p>
   </section>
 
   <section>
-    <h2>The Arctic kernel configuration</h2>
-    <p>Both <code>Arctic-base-kernel</code> and <code>Arctic-kernel</code>
-    start from a distribution baseline config and apply the same delta on
-    top of it — the same options changed in both, for the same reasons,
-    which is worth knowing since it means "which kernel" and "which config
-    philosophy" are independent choices, not bundled together.</p>
-    <ul>
-      <li><strong>No BTF, no DWARF, no debuginfo.</strong> Across roughly
-      4,800 modules this costs hours of build time and hundreds of
-      megabytes of image size for information almost nobody installing from
-      an ISO needs.</li>
-      <li><strong>No module signing, no lockdown.</strong> Nothing is signed
-      at kernel build time; alpm's own per-file sha256 verification is the
-      integrity mechanism actually in use.</li>
-      <li><strong>Storage and bus controllers built in, not modular.</strong>
-      SATA, NVMe, USB (xHCI/EHCI/OHCI/UHCI), virtio, SCSI. The initramfs (or
-      the live squashfs's own early boot path) has to reach the boot medium
-      before a single module can be loaded from it, so these specifically
-      cannot themselves be modules.</li>
-      <li><strong>Filesystems built in.</strong> ext4, btrfs, xfs, vfat,
-      iso9660, squashfs, overlayfs — the live ISO mounts a compressed
-      squashfs under a tmpfs overlay before any module is available to load,
-      so all of that has to already be present in the kernel image itself.</li>
-      <li><strong>Framebuffer and simpledrm built in</strong>, so a usable
-      console exists before any real graphics driver has loaded.</li>
-    </ul>
-    <p><code>Arctic-small-kernel</code> goes one step further and disables
-    the module loader entirely — everything it is able to do, it does
-    without ever loading a module, and correspondingly needs no initramfs at
-    all, trading flexibility for a genuinely faster boot on hardware you
-    already know the shape of.</p>
+    <h2>From the boot menu</h2>
+    <p>The recent generations are listed directly in the bootloader:</p>
+    <pre class="code">Arctic Linux
+Arctic Linux (verbose)
+Arctic Linux (recovery shell)
+Arctic Linux (generation 4)
+Arctic Linux (generation 3)</pre>
+    <p>Choosing one boots with <code>arctic.generation=N</code> on the
+    kernel command line. <code>/etc/rc.boot</code> checks for it very
+    early, before any service starts, and reconciles the system to that
+    generation if it isn't already current - so booting that entry means
+    the same thing as <code>arctic-generation switch N</code> before
+    powering on. If the switch itself fails, the machine still finishes
+    booting normally and reports the failure - an escape hatch that can
+    get stuck is not an escape hatch.</p>
   </section>
 
-  <section>
-    <h2>Building a kernel yourself</h2>
-    <pre class="code">git clone https://github.com/apiwo/arctic-kernel
-cd arctic-kernel
-container/build.sh Default-config/config default bzImage modules</pre>
-    <p>The build runs inside bubblewrap: the host toolchain is bound
-    read-only, there is no network access during the build, and the only
-    writable path is the build's own output directory. No docker or podman
-    required or used.</p>
-    <p>Four ready-made configurations ship in the repository:
-    <code>Default-config</code>, <code>Hardened-config</code>,
-    <code>Small-config</code>, <code>RT-config</code> — matching the four
-    flavours Arctic itself packages.</p>
-    <p>To build it specifically as an installable Arctic package, using
-    Arctic's exact configuration rather than the repository's own
-    <code>Default-config</code>, see
-    <a href="/building.html">building from source</a>.</p>
-  </section>
-
-  <section>
-    <h2>Microcode and firmware</h2>
-    <pre class="code">A_MICROCODE=auto     # or intel, amd, none</pre>
-    <p><code>auto</code> reads <code>vendor_id</code> out of
-    <code>/proc/cpuinfo</code> and installs <code>intel-ucode</code> or
-    <code>amd-ucode</code> accordingly. Device firmware comes from the
-    <code>linux-firmware</code> package, which
-    <code>Arctic-libre-kernel</code> deliberately skips installing —
-    choosing that kernel is specifically a statement about not wanting
-    nonfree blobs on the machine, and pulling in
-    <code>linux-firmware</code> anyway would quietly undo that.</p>
-  </section>
-
-  <section>
-    <h2>Changing kernel later</h2>
-    <p>The kernel is an ordinary package, so it is declared the same way any
-    other package is:</p>
-    <pre class="code">SYS_PACKAGES="
-	Arctic-kernel
-	...
-"</pre>
-    <pre class="code">arctic-rebuild</pre>
-    <p>Which means a kernel change is recorded as a generation like anything
-    else, and a kernel that turns out not to boot is one entry away from
-    being undone from the boot menu rather than requiring a rescue medium —
-    see <a href="/generations.html">generations</a> for exactly how that
-    recovery path works.</p>
-  </section>
-
-  <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/building.html">building from source</a> · <a href="/troubleshooting.html">troubleshooting</a> · <a href="/reference.html">install.conf reference</a></p>
+  <section class="docnav">
+    More: <a href="/">arctic linux docs</a> ·
+    <a href="/install.html">install</a> ·
+    <a href="/configure.html">configuration</a> ·
+    <a href="/packages.html">packages</a> ·
+    <a href="/networking.html">networking, desktops &amp; init</a> ·
+    <a href="/troubleshooting.html">troubleshooting &amp; reference</a>
   </section>
 
   <footer>
-    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>Arctic Linux - <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

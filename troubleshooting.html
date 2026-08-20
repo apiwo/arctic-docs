@@ -3,100 +3,52 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Troubleshooting — Arctic Linux docs</title>
+<title>Troubleshooting &amp; reference - Arctic Linux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <nav class="topbar">
-  <div class="wrap" style="padding:0;">
-    <a href="https://arctic-linux.apiwow.net">main page</a>
-    <a href="https://pkg-arctic.apiwow.net">pkg</a>
-    <a href="https://ports-arctic.apiwow.net">ports</a>
-    <a href="https://arctic-docs.apiwow.net">docs</a>
-    <a href="https://arctic-releases.apiwow.net">releases</a>
-    <a href="https://github.com/apiwo/arctic-linux">github</a>
-    <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
-  </div>
+  <a href="https://arctic-linux.apiwow.net">main</a>
+  <a href="https://arctic-docs.apiwow.net">docs</a>
+  <a href="https://pkg-arctic.apiwow.net">packages</a>
+  <a href="https://ports-arctic.apiwow.net">ports</a>
+  <a href="https://github.com/apiwo/arctic-linux">github</a>
+  <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
 </nav>
 <div class="wrap">
-  <header class="hero" style="padding:28px 0 8px;">
-    <h1 style="font-size:32px;">Troubleshooting</h1>
-  </header>
+  <header class="hero"><h1>Troubleshooting &amp; reference</h1></header>
 
   <section>
     <h2>Start with the boot log</h2>
-    <p>Every boot writes a record of what actually happened to
-    <code>/run/arctic/boot.log</code>, copied to <code>/var/log/boot.log</code>
-    once the boot finishes so it survives past that session:</p>
     <pre class="code">cat /run/arctic/boot.log
 cat /var/log/boot.log     # from a previous boot</pre>
-    <p>This did not always exist. Service failures used to be sent straight
-    to <code>/dev/null</code> by <code>rc.boot</code>, on the theory that a
-    quiet boot should stay quiet — but the actual effect was that a service
-    which failed to start left <em>no trace anywhere</em>: the console
-    showed a plain <code>failed</code> with no detail, there was nothing in
-    any log, and diagnosing why meant re-running the exact failing command
-    by hand and hoping the failure reproduced identically outside of boot
-    context. The log now records, for every service: that it was
-    considered, whether it started, and if not, its actual stderr output —
-    which is what made it possible to find the three separate causes behind
-    the dbus failure below in the first place, rather than continuing to
-    guess.</p>
+    <p>Every boot records, for every service: that it was considered,
+    whether it started, and if not, its actual stderr output.</p>
   </section>
 
   <section>
     <h2>"failed to initialize dbus" from a D-Bus service</h2>
-    <p>This first showed up as <code>iwctl</code> reporting <code>failed to
-    initialize dbus</code>, back when iwd was the wireless daemon (it's
-    since been replaced outright by NetworkManager + nmtui - see
-    <a href="/networking.html">networking</a>). The three causes below are
-    unrelated to iwd specifically: anything that registers itself on the
-    system bus at startup can hit any of them, and NetworkManager does
-    exactly that now. It looked like a single dbus problem and was actually
-    three unrelated ones, found one at a time by adding boot logging and
-    reading what it said instead of guessing further:</p>
-    <p><strong>1. <code>/var/run</code> did not exist.</strong> dbus itself
-    listens on <code>/run/dbus/system_bus_socket</code> and was running
-    correctly the entire time — confirmed directly with
-    <code>dbus-send --system ... org.freedesktop.DBus.ListNames</code>,
-    which succeeded. But iwd (like bluez today) is built on ell, a separate
-    D-Bus client library, and ell's default system bus lookup checks
+    <p>Anything that registers itself on the system bus at startup -
+    pipewire, bluetoothd, a display manager - can hit any of these three,
+    found one at a time by adding boot logging and reading what it said:</p>
+    <p><strong>1. <code>/var/run</code> did not exist.</strong> A client
+    built on ell (bluez, historically iwd) checks
     <code>/var/run/dbus</code> specifically, not <code>/run/dbus</code>.
-    On a system where <code>/var/run</code> is not a symlink to
-    <code>/run</code> (the traditional FHS arrangement, and one this rootfs
-    build had simply never set up), that path does not exist, and an
-    ell-based client cannot find a bus it is sitting right next to. Fixed
-    by adding <code>/var/run -&gt; ../run</code> and
-    <code>/var/lock -&gt; ../run/lock</code> as two more of the
-    merged-filesystem symlinks created during the rootfs build.</p>
+    Fixed by adding <code>/var/run -&gt; ../run</code> and
+    <code>/var/lock -&gt; ../run/lock</code> as merged-filesystem
+    symlinks.</p>
     <p><strong>2. The <code>netdev</code> group did not exist.</strong>
-    iwd shipped its own D-Bus policy file granting members of a group
-    called <code>netdev</code> access to its bus name; NetworkManager's
-    own policy references the same group now. dbus-daemon logs
-    <code>Unknown group "netdev" in message bus configuration file</code>
-    and — this is the part that made it hard to spot — does not fail to
-    start over this. It logs the warning, discards that one policy file, and
-    continues running with everything else intact, so dbus itself looked
-    completely healthy while the service depending on that policy was
-    quietly unable to claim its own bus name because the specific policy
-    permitting it had been silently dropped. Fixed by adding
-    <code>netdev</code> as a real system group, both on the live ISO and
-    by the installer for a freshly installed system.</p>
+    A D-Bus policy file granting members of <code>netdev</code> access to
+    a bus name failed with <code>Unknown group "netdev"</code> - and
+    dbus-daemon does not fail to start over this, it discards the policy
+    and continues, so dbus looked healthy while the dependent service
+    quietly couldn't claim its bus name. Fixed by adding
+    <code>netdev</code> as a real system group.</p>
     <p><strong>3. No machine ID had ever been generated.</strong>
     <code>dbus-daemon --system</code> refuses to start at all without
-    <code>/etc/machine-id</code> (or the older
-    <code>/var/lib/dbus/machine-id</code> location) being present, and
-    nothing on Arctic ever generated one. Combined with
-    <code>rc.boot</code> sending service output to <code>/dev/null</code> at
-    the time, this specific failure was completely invisible — dbus simply
-    never started, with nothing on screen or in any log to say why. Fixed
-    by generating one on <code>/etc/rc.d/dbus</code>'s first start, via
-    <code>dbus-uuidgen</code> if present or a random-hex fallback otherwise,
-    and never regenerating it again once one exists - the same PRESTART
-    hook now runs for NetworkManager's own rc.d script too.</p>
-    <p>To check the state of all three directly on a running system:</p>
+    <code>/etc/machine-id</code>. Fixed by generating one on
+    <code>/etc/rc.d/dbus</code>'s first start.</p>
     <pre class="code">service status dbus
-service status NetworkManager
 ls -l /etc/machine-id
 readlink /var/run
 grep netdev /etc/group</pre>
@@ -104,115 +56,82 @@ grep netdev /etc/group</pre>
 
   <section>
     <h2>A service is enabled but never starts</h2>
-    <p>Check the boot log first — as of the fix above, a service that is
-    enabled but has no executable script at <code>/etc/rc.d/&lt;name&gt;</code>
-    is now reported explicitly (<code>no executable /etc/rc.d/name</code>)
-    rather than silently skipped the way it used to be. If the script does
-    exist and is executable, run it by hand to see the real error:</p>
-    <pre class="code">/etc/rc.d/some-service start</pre>
-    <p>If it is a translated definition under a non-busybox init (OpenRC,
-    runit, and so on), regenerate it explicitly in case the translation is
-    stale relative to <code>/etc/rc.d</code>:</p>
-    <pre class="code">arctic-init-setup openrc      # or whichever init is actually running</pre>
+    <p>Check the boot log first - a service that's enabled but has no
+    executable script at <code>/etc/rc.d/&lt;name&gt;</code> is reported
+    explicitly (<code>no executable /etc/rc.d/name</code>) rather than
+    silently doing nothing.</p>
   </section>
 
   <section>
-    <h2><code>doas</code> says "Authentication failed" on the live image</h2>
-    <p>The live image logs straight in as root with an intentionally empty
-    password — there's nothing on a read-only image worth protecting, and
-    the installer needs root anyway. <code>login</code> treats that empty
-    shadow entry as "no password needed", but <code>doas</code>'s own auth
-    check does not: a rule that requires a password (the default unless a
-    rule says <code>nopass</code>) has no empty-input case to match, so it
-    fails no matter what you type at the prompt, including nothing. The
-    live image's own <code>/etc/doas.conf</code> is <code>permit nopass
-    :wheel</code> for exactly this reason, so <code>doas</code> should not
-    normally even ask. Confirm which one is actually in place:</p>
-    <pre class="code">cat /etc/doas.conf</pre>
-    <p>This only affects the live image. The installed system's own
-    <code>/etc/doas.conf</code>, written by <code>arctic-install</code>,
-    requires a password on purpose — that's the whole point of having a
-    real account with a real password on a real system.</p>
+    <h2>Chroot backspace moves the cursor instead of deleting</h2>
+    <p>A target root has no terminfo database yet - the shell's line
+    editor doesn't know what the terminal actually sends for erase, and
+    backspace (which sends <code>^?</code>) doesn't match what the editor
+    expects (<code>^H</code>). <code>arctic-chroot</code> runs
+    <code>stty sane erase ^?</code> explicitly before starting a shell,
+    which needs no terminfo at all.</p>
   </section>
 
   <section>
-    <h2>fstab looks wrong, or the wrong thing is mounted</h2>
-    <p><code>/etc/fstab</code> is generated once, at install time, directly
-    from <code>/proc/mounts</code> at the moment the installer finishes —
-    not reconstructed from the config afterward, and not regenerated by
-    <code>arctic-rebuild</code>. If you change the disk layout after
-    installing (add a partition, move something), fstab does not update
-    itself; edit it by hand, the same as on any other distribution past the
-    install step.</p>
+    <h2>Ping fails with a permission error as a normal user</h2>
+    <p>busybox's <code>ping</code> unconditionally opens a raw socket,
+    which needs <code>CAP_NET_RAW</code> or root. Arctic ships busybox
+    setuid-root with <code>/etc/busybox.conf</code> granting
+    <code>ping</code> specifically to root and the <code>wheel</code>
+    group - every other applet busybox marks
+    <code>BB_SUID_MAYBE</code> (<code>mount</code>, <code>findfs</code>,
+    <code>traceroute</code>) is explicitly denied in the same file,
+    since an unlisted MAYBE-tagged applet stays fully root for any
+    caller otherwise.</p>
   </section>
 
   <section>
-    <h2>A rebuild made something worse</h2>
-    <pre class="code">arctic rollback</pre>
-    <p>goes back exactly one generation, undoing the most recent rebuild.
-    If the system will not boot at all, choose the previous "Arctic Linux
-    (generation N)" entry directly from the boot menu instead — full detail
-    on both paths in <a href="/generations.html">generations and
-    rollback</a>.</p>
+    <h2>alpm environment variables</h2>
+    <table>
+      <tr><th>Variable</th><th>Default</th><th>What it does</th></tr>
+      <tr><td><code>ALPM_ROOT</code></td><td><code>/</code></td><td>work on another root instead of / (an extracted tarball, a chroot)</td></tr>
+      <tr><td><code>ALPM_CONF</code></td><td><code>/etc/alpm/alpm.conf</code></td><td>always host-absolute, even under <code>ALPM_ROOT</code> - a target's own copy is for its future use, not read during a cross-root install</td></tr>
+      <tr><td><code>ALPM_REPOD</code></td><td><code>/etc/alpm/repos.d</code></td><td>same host-absolute rule as <code>ALPM_CONF</code></td></tr>
+      <tr><td><code>ALPM_CACHE</code></td><td><code>/var/cache/alpm</code></td><td>downloaded packages, fetched sources, build scratch</td></tr>
+      <tr><td><code>ALPM_YES</code></td><td>unset</td><td>skip confirmation prompts</td></tr>
+      <tr><td><code>ALPM_FORCE</code></td><td>unset</td><td>override a dependency or <code>pkg.save[]</code> refusal</td></tr>
+      <tr><td><code>ALPM_STYLE</code></td><td><code>arctic</code></td><td>output style - see <a href="/packages.html">packages</a></td></tr>
+    </table>
+    <p><code>alpm-strap</code>'s whole reason for existing is that
+    <code>ALPM_CONF</code>/<code>ALPM_REPOD</code> stay host-absolute
+    under <code>ALPM_ROOT</code> by default - correct when a live Arctic
+    session with real config at <code>/etc/alpm</code> is installing;
+    wrong when the host is some other live Linux with no
+    <code>/etc/alpm</code> at all, which is why it passes both
+    explicitly.</p>
   </section>
 
   <section>
-    <h2>A repository says "unsigned"</h2>
-    <pre class="code">-> main           unsigned
-   the signature does not match any key in /etc/alpm/keys</pre>
-    <p>The index downloaded perfectly well and was then thrown away, so this
-    is not a network fault and nothing about the connection is worth
-    checking. Either the public keys in <code>/etc/alpm/keys</code> are not
-    the ones these repositories are signed with — an old key after a
-    rotation, usually, fixed by an <code>arctic-base</code> upgrade — or what
-    answered is not the repository it claims to be.</p>
-    <p><code>the repository served no INDEX.sig</code> is the softer version:
-    nothing was signed at all. That is tolerated on a repository set to
-    <code>sig = optional</code> and refused on one set to
-    <code>required</code>. A local <code>file://</code> repository, or
-    somebody else's, has no reason to carry a signature Arctic's key would
-    match — set <code>sig = off</code> on those rather than turning
-    verification off everywhere.</p>
-
-    <h2>An install stops on a file conflict</h2>
-    <pre class="code">E: file conflict: /usr/bin/blkid is owned by busybox
-  both would install a different /usr/bin/blkid</pre>
-    <p>Two packages ship the same path with different contents, and alpm
-    stops rather than letting whichever is installed second win silently.
-    Identical files are not a conflict — the path is handed over — and
-    neither is a package whose recipe declares <code>replaces</code> for the
-    current owner, which is how a dedicated implementation takes a path from
-    a multi-call binary's fallback applet.</p>
-    <p>If it is a package from the Arctic repositories, it is a packaging
-    bug: report it. Removing the current owner works, and so does
-    <code>alpm rem -f</code> on it, but on a base system that owner is
-    usually busybox and removing it is worse than the conflict.</p>
-
-    <h2>A build fails with a permission or read-only error</h2>
-    <p>This is the sandbox working as intended, not a bug — see
-    <a href="/building.html">building from source</a> for exactly why
-    everything builds under a read-only host by design. Check the recipe for
-    a missing <code>DESTDIR</code>/<code>pkgdir</code> in its
-    <code>package()</code> step before assuming anything else is wrong.</p>
+    <h2>Quick reference</h2>
+    <table>
+      <tr><td><code>/etc/arctic/*.conf</code></td><td>the six declarative files - see <a href="/configure.html">configuration</a></td></tr>
+      <tr><td><code>/etc/arctic/conf.lib</code></td><td>the shared reader/writer for them</td></tr>
+      <tr><td><code>alpm</code></td><td>packages: install, remove, build from source, snapshot, roll back</td></tr>
+      <tr><td><code>arctic-rebuild</code></td><td>make the system match the declared config</td></tr>
+      <tr><td><code>arctic rollback</code></td><td>go back to an earlier generation</td></tr>
+      <tr><td><code>arctic-shell</code></td><td>a throwaway environment with packages in it</td></tr>
+      <tr><td><code>arctic-chroot</code></td><td>enter an installed system with the kernel filesystems bound</td></tr>
+      <tr><td><code>/etc/alpm/keys</code></td><td>the public keys a repository index has to be signed with</td></tr>
+      <tr><td><code>/run/arctic/boot.log</code></td><td>what actually happened during the last boot</td></tr>
+    </table>
   </section>
 
-  <section>
-    <h2>A package built earlier now fails to build again</h2>
-    <p>If a recipe was recently regenerated from
-    <code>ports/manifest.tsv</code> and a hand fix to it has disappeared,
-    check for a missing <code>recipe.local</code> marker next to it — see
-    <a href="/packages.html">packages</a>. This has happened more than once
-    to real recipes in this tree and is always the same root cause: a
-    hand-written recipe with no marker gets silently regenerated back to the
-    template on the next manifest-driven pass.</p>
-  </section>
-
-  <section>
-    <p style="color:#7f92b0;font-size:14px;">More: <a href="/">arctic linux docs</a> · <a href="/install.html">install</a> · <a href="/configure.html">declarative configuration</a> · <a href="/generations.html">generations and rollback</a> · <a href="/init.html">init systems</a> · <a href="/kernels.html">kernels</a> · <a href="/packages.html">packages (alpm)</a> · <a href="/desktops.html">desktops and audio</a> · <a href="/networking.html">networking</a> · <a href="/shell.html">ephemeral shells</a> · <a href="/building.html">building from source</a> · <a href="/reference.html">install.conf reference</a></p>
+  <section class="docnav">
+    More: <a href="/">arctic linux docs</a> ·
+    <a href="/install.html">install</a> ·
+    <a href="/configure.html">configuration</a> ·
+    <a href="/packages.html">packages</a> ·
+    <a href="/kernels.html">kernels &amp; generations</a> ·
+    <a href="/networking.html">networking, desktops &amp; init</a>
   </section>
 
   <footer>
-    <p>Arctic Linux — <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>Arctic Linux - <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
   </footer>
 </div>
 </body>
