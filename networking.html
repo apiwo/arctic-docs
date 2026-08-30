@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Networking, desktops &amp; init - Arctic Linux docs</title>
+<title>Networking, desktops &amp; init - ScrapLinux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <nav class="topbar">
-  <a href="https://arctic-linux.apiwow.net">main</a>
-  <a href="https://arctic-docs.apiwow.net">docs</a>
-  <a href="https://pkg-arctic.apiwow.net">packages</a>
-  <a href="https://ports-arctic.apiwow.net">ports</a>
-  <a href="https://github.com/apiwo/arctic-linux">github</a>
-  <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
+  <a href="https://scraplinux.apiwow.net">main</a>
+  <a href="https://scraplinux-docs.apiwow.net">docs</a>
+  <a href="https://pkg-scraplinux.apiwow.net">packages</a>
+  <a href="https://ports-scraplinux.apiwow.net">ports</a>
+  <a href="https://scraplinux-releases.apiwow.net">releases</a>
+  <a href="https://github.com/apiwo/scraplinux">github</a>
+  <a href="https://codeberg.org/apiwo/scraplinux">codeberg</a>
 </nav>
 <div class="wrap">
   <header class="hero"><h1>Networking, desktops &amp; init</h1></header>
@@ -29,7 +30,7 @@ wifi-connect scan [iface]           scan and show what is in range</pre>
     <p>Scans, lists what's in range, asks which interface and network,
     reads the passphrase with the characters masked. On a successful
     connect it writes the SSID/PSK/interface to
-    <code>/etc/arctic/network.conf</code> - see
+    <code>/etc/scraplinux/network.conf</code> - see
     <a href="/configure.html">configuration</a>. <code>rc.d/wifi</code>
     reads that back on every boot and reconnects, started in the
     background by <code>rc.boot</code> and never waited on - an
@@ -42,16 +43,16 @@ wifi-connect scan [iface]           scan and show what is in range</pre>
     domain <code>00</code>, where most 5 GHz channels are receive-only -
     an access point shows up in a scan and the card is then forbidden to
     transmit to it, which reads exactly like a wrong passphrase.
-    <code>alpm add wireless-regdb</code> fixes it; <code>WIFI_COUNTRY=US
+    <code>scrapkg add wireless-regdb</code> fixes it; <code>WIFI_COUNTRY=US
     wifi-connect</code> sets a country code for one run.</p>
   </section>
 
   <section>
     <h2>Desktops</h2>
-    <pre class="code">alpm add arctic-xfce     # or arctic-kde, niri-dms, apiwow-dwm</pre>
+    <pre class="code">scrapkg add scraplinux-xfce     # or scraplinux-kde, niri-dms, apiwow-dwm</pre>
     <table>
-      <tr><td><code>arctic-xfce</code></td><td>XFCE 4.20, foot, Thunar, LightDM, X11, PipeWire, fonts</td></tr>
-      <tr><td><code>arctic-kde</code></td><td>Plasma 6, foot, Dolphin, SDDM, PipeWire, fonts</td></tr>
+      <tr><td><code>scraplinux-xfce</code></td><td>XFCE 4.20, foot, Thunar, LightDM, X11, PipeWire, fonts</td></tr>
+      <tr><td><code>scraplinux-kde</code></td><td>Plasma 6, foot, Dolphin, SDDM, PipeWire, fonts</td></tr>
       <tr><td><code>niri-dms</code></td><td>Niri, DankMaterialShell, foot, fuzzel, mako, PipeWire, fonts, Firefox</td></tr>
       <tr><td><code>apiwow-dwm</code></td><td>dwm, dmenu, st, picom, slstatus, slock, X11, fonts</td></tr>
     </table>
@@ -65,11 +66,11 @@ startx</pre>
 
   <section>
     <h2>Audio</h2>
-    <pre class="code">alpm add sound-setup            # busybox init
-alpm add sound-setup-openrc     # OpenRC</pre>
+    <pre class="code">scrapkg add sound-setup            # busybox init
+scrapkg add sound-setup-openrc     # OpenRC</pre>
     <p>PipeWire and WirePlumber as the audio layer, the PipeWire
     PulseAudio compatibility shim, ALSA, and <code>alsamixer</code>.
-    Unlike the bare <code>arctic-sound</code> meta-package (dependencies
+    Unlike the bare <code>scraplinux-sound</code> meta-package (dependencies
     only), <code>sound-setup</code> also adds every real user to the
     <code>audio</code> group and drops a per-session autostart hook -
     PipeWire is a per-user daemon, so nothing starts it without one.</p>
@@ -80,10 +81,10 @@ alpm add sound-setup-openrc     # OpenRC</pre>
     <table>
       <tr><td><code>busybox</code></td><td>the default, bundled in the def tarball. <code>/etc/rc.boot</code>, <code>/etc/rc.d</code> scripts.</td></tr>
       <tr><td><code>openrc</code></td><td>bundled in the openrc tarball, with <code>openrc-init</code> wired up as PID 1. Dependency-based, from Gentoo - <code>/etc/init.d</code>, <code>rc-update</code>.</td></tr>
-      <tr><td><code>sysvinit</code></td><td>installed afterward via <code>alpm add</code>. <code>/etc/inittab</code>, <code>/etc/rc3.d</code>.</td></tr>
+      <tr><td><code>sysvinit</code></td><td>installed afterward via <code>scrapkg add</code>. <code>/etc/inittab</code>, <code>/etc/rc3.d</code>.</td></tr>
       <tr><td><code>runit</code></td><td>installed afterward. <code>/etc/sv</code>, <code>sv up</code>/<code>sv down</code>.</td></tr>
       <tr><td><code>dinit</code></td><td>installed afterward. <code>dinitctl</code>.</td></tr>
-      <tr><td><code>initialization</code></td><td><a href="https://github.com/apiwo/initialization">Arctic's own fork of nitro</a>, installed afterward.</td></tr>
+      <tr><td><code>initialization</code></td><td><a href="https://github.com/apiwo/initialization">ScrapLinux's own fork of nitro</a>, installed afterward.</td></tr>
     </table>
     <p>Only the two bundled in the tarballs (busybox, OpenRC) are
     boot-tested end to end; the rest are verified by inspection of the
@@ -96,22 +97,22 @@ CMD=/usr/bin/bluetoothd
 ARGS=""
 BACKGROUND=yes
 
-. /etc/arctic/svc.lib
+. /etc/scraplinux/svc.lib
 svc_main "$@"</pre>
-    <p><code>arctic-init-setup</code> reads (not runs) that and generates
+    <p><code>scraplinux-init-setup</code> reads (not runs) that and generates
     the equivalent for whichever init is actually running - an OpenRC
     <code>init.d</code> script, a runit <code>run</code> file, and so on.
     One definition, generated rest - adding a service stays a one-file
     change, and no init drifts out of step with the others.</p>
-    <pre class="code">arctic-init-setup openrc              regenerate service definitions for OpenRC
-arctic-init-setup runit --root /mnt   or write them into a target root</pre>
+    <pre class="code">scraplinux-init-setup openrc              regenerate service definitions for OpenRC
+scraplinux-init-setup runit --root /mnt   or write them into a target root</pre>
     <p>A rebuild that changes the enabled service set regenerates the
     definitions for whichever init is running automatically - not
     something to remember by hand.</p>
   </section>
 
   <section class="docnav">
-    More: <a href="/">arctic linux docs</a> ·
+    More: <a href="/">scraplinux linux docs</a> ·
     <a href="/install.html">install</a> ·
     <a href="/configure.html">configuration</a> ·
     <a href="/packages.html">packages</a> ·
@@ -120,7 +121,7 @@ arctic-init-setup runit --root /mnt   or write them into a target root</pre>
   </section>
 
   <footer>
-    <p>Arctic Linux - <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>ScrapLinux - <a href="https://github.com/apiwo/scraplinux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

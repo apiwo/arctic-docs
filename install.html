@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Install - Arctic Linux docs</title>
+<title>Install - ScrapLinux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <nav class="topbar">
-  <a href="https://arctic-linux.apiwow.net">main</a>
-  <a href="https://arctic-docs.apiwow.net">docs</a>
-  <a href="https://pkg-arctic.apiwow.net">packages</a>
-  <a href="https://ports-arctic.apiwow.net">ports</a>
-  <a href="https://github.com/apiwo/arctic-linux">github</a>
-  <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
+  <a href="https://scraplinux.apiwow.net">main</a>
+  <a href="https://scraplinux-docs.apiwow.net">docs</a>
+  <a href="https://pkg-scraplinux.apiwow.net">packages</a>
+  <a href="https://ports-scraplinux.apiwow.net">ports</a>
+  <a href="https://scraplinux-releases.apiwow.net">releases</a>
+  <a href="https://github.com/apiwo/scraplinux">github</a>
+  <a href="https://codeberg.org/apiwo/scraplinux">codeberg</a>
 </nav>
 <div class="wrap">
   <header class="hero"><h1>Install</h1></header>
@@ -21,8 +22,8 @@
   <section>
     <p>No ISO, no guided installer. Boot any live Linux with
     <code>tar</code>, <code>curl</code> or <code>wget</code>, and disk
-    tools - Arctic's own media is not needed for this step. The short
-    version is on the <a href="https://arctic-linux.apiwow.net">main
+    tools - ScrapLinux's own media is not needed for this step. The short
+    version is on the <a href="https://scraplinux.apiwow.net">main
     page</a>; this covers the parts that guide leaves out.</p>
   </section>
 
@@ -47,38 +48,38 @@ mount --mkdir /dev/sdX1 /mnt/boot</pre>
     <code>cryptsetup open</code> before formatting, and write
     <code>/etc/crypttab</code> by hand once chrooted in (a single
     <code>cryptroot UUID=&lt;luks-uuid&gt; none luks</code> line) -
-    <code>arctic-mkinitramfs</code> reads it back to decide whether to
+    <code>scraplinux-mkinitramfs</code> reads it back to decide whether to
     bundle <code>cryptsetup</code> into the initramfs.</p>
   </section>
 
   <section>
     <h2>Extracting the tarball</h2>
-    <pre class="code">tar -xJf arctic-linux-def-tarball.tar.xz -C /mnt</pre>
+    <pre class="code">tar -xJf scraplinux-def-tarball.tar.xz -C /mnt</pre>
     <p>Two flavors: <code>def</code> (busybox init, the tested default)
     and <code>openrc</code> (OpenRC already wired up as init instead).
     Both bundle glibc, toybox, busybox, zsh, doas, e2fsprogs, and
-    <code>alpm</code> itself, pre-installed and ready to sync. Neither
-    bundles <code>arctic-base</code>, a kernel, or a bootloader - those
-    come from <code>alpm add</code> once repo indexes are synced.</p>
+    <code>scrapkg</code> itself, pre-installed and ready to sync. Neither
+    bundles <code>scraplinux-base</code>, a kernel, or a bootloader - those
+    come from <code>scrapkg add</code> once repo indexes are synced.</p>
   </section>
 
   <section>
-    <h2>Bootstrapping alpm</h2>
-    <pre class="code">/mnt/usr/bin/alpm-strap /mnt</pre>
-    <p><code>alpm-strap</code>'s only job is syncing fresh repository
+    <h2>Bootstrapping scrapkg</h2>
+    <pre class="code">/mnt/usr/bin/scrapkg-strap /mnt</pre>
+    <p><code>scrapkg-strap</code>'s only job is syncing fresh repository
     indexes into the extracted tree. It passes
-    <code>ALPM_CONF</code>/<code>ALPM_REPOD</code> explicitly rather than
+    <code>SCRAPKG_CONF</code>/<code>SCRAPKG_REPOD</code> explicitly rather than
     relying on their defaults, because those default to host-absolute
-    paths - correct when a live Arctic session with real
-    <code>/etc/alpm</code> config is doing the installing, wrong here,
+    paths - correct when a live ScrapLinux session with real
+    <code>/etc/scrapkg</code> config is doing the installing, wrong here,
     since whatever booted this could be any live Linux with no
-    <code>/etc/alpm</code> at all.</p>
+    <code>/etc/scrapkg</code> at all.</p>
   </section>
 
   <section>
     <h2>fstab, before chroot</h2>
-    <pre class="code">ALPM_ROOT=/mnt ALPM_CONF=/mnt/etc/alpm/alpm.conf ALPM_REPOD=/mnt/etc/alpm/repos.d \
-  /mnt/usr/bin/alpm add genfstab
+    <pre class="code">SCRAPKG_ROOT=/mnt SCRAPKG_CONF=/mnt/etc/scrapkg/scrapkg.conf SCRAPKG_REPOD=/mnt/etc/scrapkg/repos.d \
+  /mnt/usr/bin/scrapkg add genfstab
 /mnt/usr/bin/genfstab /mnt >> /mnt/etc/fstab</pre>
     <p><code>genfstab</code> reads <code>/proc/mounts</code> from the
     live environment's own view - it has to run before chroot, not after,
@@ -91,26 +92,26 @@ mount --mkdir /dev/sdX1 /mnt/boot</pre>
 
   <section>
     <h2>Inside chroot</h2>
-    <pre class="code">/mnt/usr/bin/arctic-chroot /mnt</pre>
+    <pre class="code">/mnt/usr/bin/scraplinux-chroot /mnt</pre>
     <p>Bind-mounts <code>/proc /sys /dev /run</code> and drops you into a
     shell with a correct backspace (<code>stty erase ^?</code> is set
     explicitly, since the target has no terminfo database yet to agree
     with the terminal on what backspace even sends).</p>
     <pre class="code">passwd
 adduser you
-alpm add arctic-base
-alpm add arctic-base-kernel
-alpm add limine
-arctic-mkinitramfs
-arctic-rebuild</pre>
+scrapkg add scraplinux-base
+scrapkg add scraplinux-base-kernel
+scrapkg add limine
+scraplinux-mkinitramfs
+scraplinux-rebuild</pre>
     <p>Swap <code>limine</code> for <code>grub</code> on a BIOS install
-    if you'd rather have GRUB. Swap <code>arctic-base-kernel</code> for
-    any other flavor - <code>alpm search kernel</code> lists them, see
-    <a href="/kernels.html">kernels</a>. <code>arctic-mkinitramfs</code>
+    if you'd rather have GRUB. Swap <code>scraplinux-base-kernel</code> for
+    any other flavor - <code>scrapkg search kernel</code> lists them, see
+    <a href="/kernels.html">kernels</a>. <code>scraplinux-mkinitramfs</code>
     only needs to run explicitly here because you're doing it from inside
     a chroot rather than through a normal package upgrade, which triggers
     it as a hook automatically afterward.</p>
-    <p><code>arctic-rebuild</code> has to run here, inside the chroot,
+    <p><code>scraplinux-rebuild</code> has to run here, inside the chroot,
     not after exiting it - it reads plain <code>/etc/fstab</code>,
     <code>/etc/crypttab</code> and <code>/boot</code>, which only mean
     the target's own copies from inside the target. It activates any
@@ -130,11 +131,11 @@ arctic-rebuild</pre>
 limine bios-install /dev/sdX
 
 <span class="c"># EFI, Limine - the target's own copy, not the live environment's</span>
-mkdir -p /mnt/boot/EFI/BOOT /mnt/boot/EFI/arctic
+mkdir -p /mnt/boot/EFI/BOOT /mnt/boot/EFI/scraplinux
 cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/BOOT/
-cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/arctic/arcticx64.efi
+cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/scraplinux/scraplinuxx64.efi
 efibootmgr --create --disk /dev/sdX --part 1 \
-  --loader '\EFI\arctic\arcticx64.efi' --label 'Arctic linux'
+  --loader '\EFI\scraplinux\scraplinuxx64.efi' --label 'ScrapLinux linux'
 
 <span class="c"># BIOS, GRUB</span>
 grub-install --target=i386-pc --boot-directory=/mnt/boot /dev/sdX</pre>
@@ -144,15 +145,15 @@ grub-install --target=i386-pc --boot-directory=/mnt/boot /dev/sdX</pre>
   <section>
     <h2>Repairing an existing install</h2>
     <p>Mount the root partition (and boot partition, if separate) under
-    <code>/mnt</code>, then <code>/mnt/usr/bin/arctic-chroot /mnt</code> - the
+    <code>/mnt</code>, then <code>/mnt/usr/bin/scraplinux-chroot /mnt</code> - the
     same tool used during install works identically afterward. Re-run
-    <code>arctic-rebuild</code> from inside that chroot, same as during
+    <code>scraplinux-rebuild</code> from inside that chroot, same as during
     install, to fix a stale
     bootloader config or reactivate a kernel.</p>
   </section>
 
   <section class="docnav">
-    More: <a href="/">arctic linux docs</a> ·
+    More: <a href="/">scraplinux linux docs</a> ·
     <a href="/configure.html">configuration</a> ·
     <a href="/packages.html">packages</a> ·
     <a href="/kernels.html">kernels &amp; generations</a> ·
@@ -161,7 +162,7 @@ grub-install --target=i386-pc --boot-directory=/mnt/boot /dev/sdX</pre>
   </section>
 
   <footer>
-    <p>Arctic Linux - <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>ScrapLinux - <a href="https://github.com/apiwo/scraplinux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

@@ -3,49 +3,50 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Packages (alpm) - Arctic Linux docs</title>
+<title>Packages (scrapkg) - ScrapLinux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <nav class="topbar">
-  <a href="https://arctic-linux.apiwow.net">main</a>
-  <a href="https://arctic-docs.apiwow.net">docs</a>
-  <a href="https://pkg-arctic.apiwow.net">packages</a>
-  <a href="https://ports-arctic.apiwow.net">ports</a>
-  <a href="https://github.com/apiwo/arctic-linux">github</a>
-  <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
+  <a href="https://scraplinux.apiwow.net">main</a>
+  <a href="https://scraplinux-docs.apiwow.net">docs</a>
+  <a href="https://pkg-scraplinux.apiwow.net">packages</a>
+  <a href="https://ports-scraplinux.apiwow.net">ports</a>
+  <a href="https://scraplinux-releases.apiwow.net">releases</a>
+  <a href="https://github.com/apiwo/scraplinux">github</a>
+  <a href="https://codeberg.org/apiwo/scraplinux">codeberg</a>
 </nav>
 <div class="wrap">
-  <header class="hero"><h1>Packages (alpm)</h1></header>
+  <header class="hero"><h1>Packages (scrapkg)</h1></header>
 
   <section>
-    <h2>alpm</h2>
-    <p>Arctic's package manager, written specifically for this
-    distribution. Binary packages are <code>.alpmz</code> files - a plain
+    <h2>scrapkg</h2>
+    <p>ScrapLinux's package manager, written specifically for this
+    distribution. Binary packages are <code>.scrapkgz</code> files - a plain
     tar.xz archive holding a <code>.PKGINFO</code> metadata block, a
     <code>.FILES</code> manifest, and the payload rooted at
     <code>/</code>.</p>
-    <pre class="code">alpm add vim              install
-alpm rem vim              remove
-alpm rem -d vim         remove, and anything only it needed as a dependency
-alpm search editor        search names and descriptions
-alpm info vim             what a package is, its version, its dependencies
-alpm list                 everything currently installed
-alpm files vim            every file a package owns
-alpm owns /usr/bin/vim    which installed package owns a given file
-alpm fetch all            refresh the repository indexes over the network
-alpm upgrade              upgrade everything installed to the latest available
-alpm system get           the installed release, kernel and generation
-alpm system check         everything system upgrade would do - nothing applied
-alpm system upgrade       sync, upgrade packages and the kernel, apply pending
+    <pre class="code">scrapkg add vim              install
+scrapkg rem vim              remove
+scrapkg rem -d vim         remove, and anything only it needed as a dependency
+scrapkg search editor        search names and descriptions
+scrapkg info vim             what a package is, its version, its dependencies
+scrapkg list                 everything currently installed
+scrapkg files vim            every file a package owns
+scrapkg owns /usr/bin/vim    which installed package owns a given file
+scrapkg fetch all            refresh the repository indexes over the network
+scrapkg upgrade              upgrade everything installed to the latest available
+scrapkg system get           the installed release, kernel and generation
+scrapkg system check         everything system upgrade would do - nothing applied
+scrapkg system upgrade       sync, upgrade packages and the kernel, apply pending
                           fixes, reconcile the declarative config files</pre>
     <p>Every <code>add</code>/<code>rem</code> updates
     <code>pkgs.conf</code>'s mirror automatically - see
     <a href="/configure.html">configuration</a>. There's no separate
-    declarative package list to keep in sync; plain <code>alpm add</code>
+    declarative package list to keep in sync; plain <code>scrapkg add</code>
     is the normal, correct way to manage packages.</p>
 
-    <h3>alpm system get / check / upgrade</h3>
+    <h3>scrapkg system get / check / upgrade</h3>
     <p>Some corrections don't move a package version: a default that
     turned out to be harmful, a service file that was wrong, a script
     that failed on some machines. An upgrade can't carry those, since
@@ -53,13 +54,13 @@ alpm system upgrade       sync, upgrade packages and the kernel, apply pending
     is where they live - an ordinary binary repository, so applying a
     fix is still an install and the system stays binary, with one extra
     file naming which correction rides in which package.</p>
-    <pre class="code">alpm system check bootloader    only what might explain a machine that will not boot
-alpm system upgrade kernel
-alpm system upgrade major       only the most serious fixes
-alpm system upgrade bugfix      both fix levels, and none of the plain changes</pre>
+    <pre class="code">scrapkg system check bootloader    only what might explain a machine that will not boot
+scrapkg system upgrade kernel
+scrapkg system upgrade major       only the most serious fixes
+scrapkg system upgrade bugfix      both fix levels, and none of the plain changes</pre>
     <p>Every pending fix is listed before anything installs, and applied
     fixes are remembered, so one is offered once and never again.
-    <code>alpm system upgrade</code> runs <code>arctic-rebuild</code>
+    <code>scrapkg system upgrade</code> runs <code>scraplinux-rebuild</code>
     itself at the end, so a package upgrade and a config change converge
     through one command.</p>
   </section>
@@ -67,31 +68,31 @@ alpm system upgrade bugfix      both fix levels, and none of the plain changes</
   <section>
     <h2>Building from source</h2>
     <p>Not every package has a binary built for it. When one doesn't,
-    alpm offers to build it on the spot.</p>
-    <pre class="code">alpm add -s some-package    build from the port, even when a binary also exists
-alpm build recipe           build a specific recipe file into an .alpmz directly</pre>
+    scrapkg offers to build it on the spot.</p>
+    <pre class="code">scrapkg add -s some-package    build from the port, even when a binary also exists
+scrapkg build recipe           build a specific recipe file into an .scrapkgz directly</pre>
     <p>Recipes come from the ports tree, a separate host from the binary
-    mirror, reached through <code>ALPM_PORTS</code> - never one of the
-    repositories in <code>/etc/alpm/repos.d</code>.</p>
+    mirror, reached through <code>SCRAPKG_PORTS</code> - never one of the
+    repositories in <code>/etc/scrapkg/repos.d</code>.</p>
   </section>
 
   <section>
     <h2>Undoing a transaction</h2>
-    <pre class="code">alpm rollback              undo the most recent transaction
-alpm rollback 20260815-111525    undo a specific one
-alpm log                   what has been done, and which transactions are on disk</pre>
-    <p>On a btrfs root alpm also takes a filesystem snapshot before every
+    <pre class="code">scrapkg rollback              undo the most recent transaction
+scrapkg rollback 20260815-111525    undo a specific one
+scrapkg log                   what has been done, and which transactions are on disk</pre>
+    <p>On a btrfs root scrapkg also takes a filesystem snapshot before every
     transaction, catching anything a package's install script did on its
     own - separate from file-level rollback.</p>
   </section>
 
   <section>
     <h2>Reporting style</h2>
-    <p><code>ALPM_STYLE</code> in <code>/etc/alpm/alpm.conf</code>
+    <p><code>SCRAPKG_STYLE</code> in <code>/etc/scrapkg/scrapkg.conf</code>
     chooses the wording and layout. The resolver, downloads and progress
     are identical in all three.</p>
     <table>
-      <tr><td><code>arctic</code></td><td>the default - <code>::</code> headings, a line per dependency</td></tr>
+      <tr><td><code>scraplinux</code></td><td>the default - <code>::</code> headings, a line per dependency</td></tr>
       <tr><td><code>apt</code></td><td>Debian's shape</td></tr>
       <tr><td><code>aeryn</code></td><td>Aeryn OS's shape - a boxed, columnar transaction summary</td></tr>
     </table>
@@ -109,24 +110,24 @@ alpm log                   what has been done, and which transactions are on dis
       <tr><td><code>big</code></td><td>packages past the mirror's file size limit: firmware, the toolchain</td></tr>
       <tr><td><code>nonfree</code>, <code>alt-nonfree</code>, <code>multilib</code></td><td>off by default; opt in explicitly</td></tr>
     </table>
-    <p>Configured per repository in <code>/etc/alpm/repos.d/*.repo</code>:</p>
+    <p>Configured per repository in <code>/etc/scrapkg/repos.d/*.repo</code>:</p>
     <pre class="code">name = main
-url = https://raw.githubusercontent.com/apiwo/arctic-linux-pkgs/main/ALL/main
+url = https://raw.githubusercontent.com/apiwo/scraplinux-pkgs/main/ALL/main
 enabled = yes
 priority = 10
 sig = optional</pre>
     <p>Browse contents at
-    <a href="https://github.com/apiwo/arctic-linux-pkgs">arctic-linux-pkgs</a>
+    <a href="https://github.com/apiwo/scraplinux-pkgs">scraplinux-pkgs</a>
     and recipes at
-    <a href="https://ports-arctic.apiwow.net">ports-arctic.apiwow.net</a>.</p>
+    <a href="https://ports-scraplinux.apiwow.net">ports-scraplinux.apiwow.net</a>.</p>
   </section>
 
   <section>
     <h2>Signatures</h2>
     <p>Every index is signed with <a href="https://man.openbsd.org/signify">signify</a>
     - Ed25519, one line of public key, no GPG anywhere near the base
-    system. The public key arrives with <code>arctic-base</code>, in
-    <code>/etc/alpm/keys</code>, before the first fetch.</p>
+    system. The public key arrives with <code>scraplinux-base</code>, in
+    <code>/etc/scrapkg/keys</code>, before the first fetch.</p>
     <pre class="code">sig = required   an index without a good signature is not used
 sig = optional   checked when it can be, said out loud when it cannot (default)
 sig = off        not checked at all</pre>
@@ -134,10 +135,10 @@ sig = off        not checked at all</pre>
 
   <section>
     <h2>Ephemeral shells</h2>
-    <pre class="code">arctic-shell git tmux ripgrep       a throwaway environment with those packages
-arctic-shell --network curl         with network access
-arctic-shell --keep vim -- vim x    build it, keep it after you exit
-arctic gc                           clean up the package cache and unused environments</pre>
+    <pre class="code">scraplinux-shell git tmux ripgrep       a throwaway environment with those packages
+scraplinux-shell --network curl         with network access
+scraplinux-shell --keep vim -- vim x    build it, keep it after you exit
+scraplinux gc                           clean up the package cache and unused environments</pre>
     <p>Content-addressed by package set, so the same request reuses a
     previous build instead of rebuilding it. Every invocation also sweeps
     for an environment left mounted by a session that was killed outright
@@ -155,12 +156,12 @@ arctic gc                           clean up the package cache and unused enviro
     <code>recipe.local</code> marker beside it, which stops the next
     manifest-driven regeneration from overwriting the hand work.</p>
     <p>Package and recipe changes go to
-    <a href="https://github.com/apiwo/arctic-linux-ports">arctic-linux-ports</a>,
-    not the main <code>arctic-linux</code> repository.</p>
+    <a href="https://github.com/apiwo/scraplinux-ports">scraplinux-ports</a>,
+    not the main <code>scraplinux</code> repository.</p>
   </section>
 
   <section class="docnav">
-    More: <a href="/">arctic linux docs</a> ·
+    More: <a href="/">scraplinux linux docs</a> ·
     <a href="/install.html">install</a> ·
     <a href="/configure.html">configuration</a> ·
     <a href="/kernels.html">kernels &amp; generations</a> ·
@@ -169,7 +170,7 @@ arctic gc                           clean up the package cache and unused enviro
   </section>
 
   <footer>
-    <p>Arctic Linux - <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>ScrapLinux - <a href="https://github.com/apiwo/scraplinux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

@@ -3,36 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kernels &amp; generations - Arctic Linux docs</title>
+<title>Kernels &amp; generations - ScrapLinux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <nav class="topbar">
-  <a href="https://arctic-linux.apiwow.net">main</a>
-  <a href="https://arctic-docs.apiwow.net">docs</a>
-  <a href="https://pkg-arctic.apiwow.net">packages</a>
-  <a href="https://ports-arctic.apiwow.net">ports</a>
-  <a href="https://github.com/apiwo/arctic-linux">github</a>
-  <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
+  <a href="https://scraplinux.apiwow.net">main</a>
+  <a href="https://scraplinux-docs.apiwow.net">docs</a>
+  <a href="https://pkg-scraplinux.apiwow.net">packages</a>
+  <a href="https://ports-scraplinux.apiwow.net">ports</a>
+  <a href="https://scraplinux-releases.apiwow.net">releases</a>
+  <a href="https://github.com/apiwo/scraplinux">github</a>
+  <a href="https://codeberg.org/apiwo/scraplinux">codeberg</a>
 </nav>
 <div class="wrap">
   <header class="hero"><h1>Kernels &amp; generations</h1></header>
 
   <section>
     <h2>Choosing a kernel</h2>
-    <pre class="code">alpm add arctic-base-kernel</pre>
+    <pre class="code">scrapkg add scraplinux-base-kernel</pre>
     <table>
-      <tr><td><code>arctic-base-kernel</code></td>
+      <tr><td><code>scraplinux-base-kernel</code></td>
           <td>the default. Linux 7.1.3, broad hardware support, most drivers as modules.</td></tr>
-      <tr><td><code>arctic-kernel</code></td>
+      <tr><td><code>scraplinux-kernel</code></td>
           <td>Linux 6.12 LTS with the ZEN patchset merged on top. See below.</td></tr>
-      <tr><td><code>arctic-libre-kernel</code></td>
+      <tr><td><code>scraplinux-libre-kernel</code></td>
           <td>no binary blob loading paths, no nonfree microcode.</td></tr>
-      <tr><td><code>arctic-small-kernel</code></td>
+      <tr><td><code>scraplinux-small-kernel</code></td>
           <td>monolithic: no module loader at all, so no initramfs is needed either. Fast boot, fixed hardware.</td></tr>
-      <tr><td><code>arctic-rt-kernel</code></td>
+      <tr><td><code>scraplinux-rt-kernel</code></td>
           <td>realtime preemption.</td></tr>
-      <tr><td><code>arctic-hardened-kernel</code></td>
+      <tr><td><code>scraplinux-hardened-kernel</code></td>
           <td>hardening-focused config options turned up.</td></tr>
     </table>
     <p>More than one kernel can be installed on the same machine at once;
@@ -41,12 +42,12 @@
   </section>
 
   <section>
-    <h2>arctic-kernel: a real fork, not a config change</h2>
+    <h2>scraplinux-kernel: a real fork, not a config change</h2>
     <p>Source at
-    <a href="https://github.com/apiwo/arctic-kernel">github.com/apiwo/arctic-kernel</a>.
+    <a href="https://github.com/apiwo/scraplinux-kernel">github.com/apiwo/scraplinux-kernel</a>.
     Linux 6.12 LTS with the
     <a href="https://github.com/zen-kernel/zen-kernel">ZEN</a> patchset
-    merged directly into the tree, plus one small Arctic-authored patch
+    merged directly into the tree, plus one small ScrapLinux-authored patch
     on top.</p>
     <ul>
       <li>PDS and BMQ alternate CPU schedulers, available but not enabled by default</li>
@@ -55,7 +56,7 @@
       <li><code>vhba</code> - a virtual SCSI host adapter, used for CD/DVD image emulation</li>
       <li>inlined futex fast paths, and assorted scheduler/TCP/cpufreq tuning from the ZEN tree</li>
     </ul>
-    <p>The Arctic-authored patch raises the default readahead window to
+    <p>The ScrapLinux-authored patch raises the default readahead window to
     512 KiB.</p>
     <p>ZEN is maintained against a moving 6.12 point-release line; this
     fork pinned to 6.12.100 after the patchset itself had drifted through
@@ -72,10 +73,10 @@
     <p>A complete, self-contained record of what the system was declared
     to be at one moment: the six config files, the explicit package set
     with exact versions, enabled services, and which kernel was in use.
-    Every <code>arctic-rebuild</code> writes one before it changes
+    Every <code>scraplinux-rebuild</code> writes one before it changes
     anything, and another once it has succeeded - so a rebuild that fails
     partway through still leaves a clean "before" record.</p>
-    <pre class="code">arctic generations
+    <pre class="code">scraplinux generations
 
 GEN   DATE                 PACKAGES SERVICES  DESCRIPTION
 *5    2026-08-01 14:02:11  84       7         rebuild
@@ -89,10 +90,10 @@ GEN   DATE                 PACKAGES SERVICES  DESCRIPTION
 
   <section>
     <h2>Rolling back</h2>
-    <pre class="code">arctic rollback            go back one generation
-arctic rollback 3          go back to generation 3 specifically
-arctic diff 3 5            what changed between them
-arctic-generation show 3   everything generation 3 recorded</pre>
+    <pre class="code">scraplinux rollback            go back one generation
+scraplinux rollback 3          go back to generation 3 specifically
+scraplinux diff 3 5            what changed between them
+scraplinux-generation show 3   everything generation 3 recorded</pre>
     <p>Rolling back restores that generation's config and reconciles the
     running machine to it - the same reconciling operation an ordinary
     rebuild performs, against an older set of files instead of the
@@ -103,23 +104,23 @@ arctic-generation show 3   everything generation 3 recorded</pre>
   <section>
     <h2>From the boot menu</h2>
     <p>The recent generations are listed directly in the bootloader:</p>
-    <pre class="code">Arctic Linux
-Arctic Linux (verbose)
-Arctic Linux (recovery shell)
-Arctic Linux (generation 4)
-Arctic Linux (generation 3)</pre>
-    <p>Choosing one boots with <code>arctic.generation=N</code> on the
+    <pre class="code">ScrapLinux
+ScrapLinux (verbose)
+ScrapLinux (recovery shell)
+ScrapLinux (generation 4)
+ScrapLinux (generation 3)</pre>
+    <p>Choosing one boots with <code>scraplinux.generation=N</code> on the
     kernel command line. <code>/etc/rc.boot</code> checks for it very
     early, before any service starts, and reconciles the system to that
     generation if it isn't already current - so booting that entry means
-    the same thing as <code>arctic-generation switch N</code> before
+    the same thing as <code>scraplinux-generation switch N</code> before
     powering on. If the switch itself fails, the machine still finishes
     booting normally and reports the failure - an escape hatch that can
     get stuck is not an escape hatch.</p>
   </section>
 
   <section class="docnav">
-    More: <a href="/">arctic linux docs</a> ·
+    More: <a href="/">scraplinux linux docs</a> ·
     <a href="/install.html">install</a> ·
     <a href="/configure.html">configuration</a> ·
     <a href="/packages.html">packages</a> ·
@@ -128,7 +129,7 @@ Arctic Linux (generation 3)</pre>
   </section>
 
   <footer>
-    <p>Arctic Linux - <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>ScrapLinux - <a href="https://github.com/apiwo/scraplinux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

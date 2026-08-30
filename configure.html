@@ -3,25 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Configuration - Arctic Linux docs</title>
+<title>Configuration - ScrapLinux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <nav class="topbar">
-  <a href="https://arctic-linux.apiwow.net">main</a>
-  <a href="https://arctic-docs.apiwow.net">docs</a>
-  <a href="https://pkg-arctic.apiwow.net">packages</a>
-  <a href="https://ports-arctic.apiwow.net">ports</a>
-  <a href="https://github.com/apiwo/arctic-linux">github</a>
-  <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
+  <a href="https://scraplinux.apiwow.net">main</a>
+  <a href="https://scraplinux-docs.apiwow.net">docs</a>
+  <a href="https://pkg-scraplinux.apiwow.net">packages</a>
+  <a href="https://ports-scraplinux.apiwow.net">ports</a>
+  <a href="https://scraplinux-releases.apiwow.net">releases</a>
+  <a href="https://github.com/apiwo/scraplinux">github</a>
+  <a href="https://codeberg.org/apiwo/scraplinux">codeberg</a>
 </nav>
 <div class="wrap">
   <header class="hero"><h1>Configuration</h1></header>
 
   <section>
-    <p>Six small files under <code>/etc/arctic/</code>, each with one job,
+    <p>Six small files under <code>/etc/scraplinux/</code>, each with one job,
     instead of one large file covering everything. Edit one, then run
-    <code>arctic-rebuild</code> to apply it.</p>
+    <code>scraplinux-rebuild</code> to apply it.</p>
     <table>
       <tr><th>File</th><th>Covers</th></tr>
       <tr><td><code>pkgs.conf</code></td><td>a mirror of what's explicitly installed - never hand-edited, never reconciled against</td></tr>
@@ -53,18 +54,18 @@ value
     a reader can check for, so a write interrupted partway through is
     detectable rather than silently read as an empty, valid file.
     <code>conf.lib</code> (sourced by <code>wifi-connect</code>,
-    <code>alpm</code>, and <code>arctic-rebuild</code>) provides
+    <code>scrapkg</code>, and <code>scraplinux-rebuild</code>) provides
     <code>conf_get</code>/<code>conf_get1</code>/<code>conf_set</code>/<code>conf_set1</code>
     - the only supported way to read or write one of these files.</p>
   </section>
 
   <section>
     <h2>pkgs.conf is a mirror, not a wishlist</h2>
-    <p><code>pkgs.arctic[]</code> is rewritten by <code>alpm</code> itself
+    <p><code>pkgs.scraplinux[]</code> is rewritten by <code>scrapkg</code> itself
     after every <code>add</code>/<code>rem</code> to match exactly what's
     explicitly installed right now. Nothing ever reconciles the machine
     <em>to</em> this file - editing it by hand changes nothing, the next
-    <code>alpm add</code>/<code>rem</code> just overwrites the edit with
+    <code>scrapkg add</code>/<code>rem</code> just overwrites the edit with
     reality again.</p>
     <p>This is deliberate, and the reason is a real incident: an earlier
     design used a declared package list that a rebuild diffed against and
@@ -76,8 +77,8 @@ value
     careful.</p>
     <p><code>pkg.save[]</code> is the opposite - a hand-maintained
     protect-list. Anything named there refuses removal outright
-    (<code>alpm rem</code> included, and any orphan sweep), regardless of
-    why it was installed, unless overridden with <code>ALPM_FORCE=1</code>.</p>
+    (<code>scrapkg rem</code> included, and any orphan sweep), regardless of
+    why it was installed, unless overridden with <code>SCRAPKG_FORCE=1</code>.</p>
   </section>
 
   <section>
@@ -91,7 +92,7 @@ value
 
   <section>
     <h2>users.conf, services.conf, hardware.conf, identity.conf</h2>
-    <p>These four are what <code>arctic-rebuild</code> actually
+    <p>These four are what <code>scraplinux-rebuild</code> actually
     reconciles. <code>users.declared[]</code> holds one
     <code>name:shell:groups</code> line per user - additive only, an
     account that exists but isn't listed is left alone rather than
@@ -104,28 +105,28 @@ value
     switched automatically - that means reinstalling boot sectors, which
     stays a manual step.</p>
     <p>Every file that starts genuinely empty gets seeded from what the
-    machine already is on the first <code>arctic-rebuild</code>, rather
+    machine already is on the first <code>scraplinux-rebuild</code>, rather
     than being reconciled against as if empty meant "remove everything" -
     an empty <code>services.conf</code> does not mean "disable every
     service currently running."</p>
   </section>
 
   <section>
-    <h2>arctic-rebuild</h2>
-    <pre class="code">arctic-rebuild             make the system match the declared files
-arctic-rebuild --dry-run   show what would change, do nothing</pre>
+    <h2>scraplinux-rebuild</h2>
+    <pre class="code">scraplinux-rebuild             make the system match the declared files
+scraplinux-rebuild --dry-run   show what would change, do nothing</pre>
     <p>Also finishes what a chroot install couldn't: activates any kernel
     package still marked <code>-nomod</code>, and writes
     <code>limine.conf</code>/<code>grub.cfg</code> from the real
     <code>/etc/fstab</code>/<code>/etc/crypttab</code> - config only,
     never the deploy command. Every successful run snapshots (on btrfs)
     and records a generation, so a bad edit is one
-    <code>arctic rollback</code> away - see
+    <code>scraplinux rollback</code> away - see
     <a href="/kernels.html">generations</a>.</p>
   </section>
 
   <section class="docnav">
-    More: <a href="/">arctic linux docs</a> ·
+    More: <a href="/">scraplinux linux docs</a> ·
     <a href="/install.html">install</a> ·
     <a href="/packages.html">packages</a> ·
     <a href="/kernels.html">kernels &amp; generations</a> ·
@@ -134,7 +135,7 @@ arctic-rebuild --dry-run   show what would change, do nothing</pre>
   </section>
 
   <footer>
-    <p>Arctic Linux - <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>ScrapLinux - <a href="https://github.com/apiwo/scraplinux">source on GitHub</a></p>
   </footer>
 </div>
 </body>

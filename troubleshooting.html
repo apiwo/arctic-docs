@@ -3,24 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Troubleshooting &amp; reference - Arctic Linux docs</title>
+<title>Troubleshooting &amp; reference - ScrapLinux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <nav class="topbar">
-  <a href="https://arctic-linux.apiwow.net">main</a>
-  <a href="https://arctic-docs.apiwow.net">docs</a>
-  <a href="https://pkg-arctic.apiwow.net">packages</a>
-  <a href="https://ports-arctic.apiwow.net">ports</a>
-  <a href="https://github.com/apiwo/arctic-linux">github</a>
-  <a href="https://codeberg.org/apiwo/arctic-linux">codeberg</a>
+  <a href="https://scraplinux.apiwow.net">main</a>
+  <a href="https://scraplinux-docs.apiwow.net">docs</a>
+  <a href="https://pkg-scraplinux.apiwow.net">packages</a>
+  <a href="https://ports-scraplinux.apiwow.net">ports</a>
+  <a href="https://scraplinux-releases.apiwow.net">releases</a>
+  <a href="https://github.com/apiwo/scraplinux">github</a>
+  <a href="https://codeberg.org/apiwo/scraplinux">codeberg</a>
 </nav>
 <div class="wrap">
   <header class="hero"><h1>Troubleshooting &amp; reference</h1></header>
 
   <section>
     <h2>Start with the boot log</h2>
-    <pre class="code">cat /run/arctic/boot.log
+    <pre class="code">cat /run/scraplinux/boot.log
 cat /var/log/boot.log     # from a previous boot</pre>
     <p>Every boot records, for every service: that it was considered,
     whether it started, and if not, its actual stderr output.</p>
@@ -67,7 +68,7 @@ grep netdev /etc/group</pre>
     <p>A target root has no terminfo database yet - the shell's line
     editor doesn't know what the terminal actually sends for erase, and
     backspace (which sends <code>^?</code>) doesn't match what the editor
-    expects (<code>^H</code>). <code>arctic-chroot</code> runs
+    expects (<code>^H</code>). <code>scraplinux-chroot</code> runs
     <code>stty sane erase ^?</code> explicitly before starting a shell,
     which needs no terminfo at all.</p>
   </section>
@@ -75,7 +76,7 @@ grep netdev /etc/group</pre>
   <section>
     <h2>Ping fails with a permission error as a normal user</h2>
     <p>busybox's <code>ping</code> unconditionally opens a raw socket,
-    which needs <code>CAP_NET_RAW</code> or root. Arctic ships busybox
+    which needs <code>CAP_NET_RAW</code> or root. ScrapLinux ships busybox
     setuid-root with <code>/etc/busybox.conf</code> granting
     <code>ping</code> specifically to root and the <code>wheel</code>
     group - every other applet busybox marks
@@ -86,43 +87,43 @@ grep netdev /etc/group</pre>
   </section>
 
   <section>
-    <h2>alpm environment variables</h2>
+    <h2>scrapkg environment variables</h2>
     <table>
       <tr><th>Variable</th><th>Default</th><th>What it does</th></tr>
-      <tr><td><code>ALPM_ROOT</code></td><td><code>/</code></td><td>work on another root instead of / (an extracted tarball, a chroot)</td></tr>
-      <tr><td><code>ALPM_CONF</code></td><td><code>/etc/alpm/alpm.conf</code></td><td>always host-absolute, even under <code>ALPM_ROOT</code> - a target's own copy is for its future use, not read during a cross-root install</td></tr>
-      <tr><td><code>ALPM_REPOD</code></td><td><code>/etc/alpm/repos.d</code></td><td>same host-absolute rule as <code>ALPM_CONF</code></td></tr>
-      <tr><td><code>ALPM_CACHE</code></td><td><code>/var/cache/alpm</code></td><td>downloaded packages, fetched sources, build scratch</td></tr>
-      <tr><td><code>ALPM_YES</code></td><td>unset</td><td>skip confirmation prompts</td></tr>
-      <tr><td><code>ALPM_FORCE</code></td><td>unset</td><td>override a dependency or <code>pkg.save[]</code> refusal</td></tr>
-      <tr><td><code>ALPM_STYLE</code></td><td><code>arctic</code></td><td>output style - see <a href="/packages.html">packages</a></td></tr>
+      <tr><td><code>SCRAPKG_ROOT</code></td><td><code>/</code></td><td>work on another root instead of / (an extracted tarball, a chroot)</td></tr>
+      <tr><td><code>SCRAPKG_CONF</code></td><td><code>/etc/scrapkg/scrapkg.conf</code></td><td>always host-absolute, even under <code>SCRAPKG_ROOT</code> - a target's own copy is for its future use, not read during a cross-root install</td></tr>
+      <tr><td><code>SCRAPKG_REPOD</code></td><td><code>/etc/scrapkg/repos.d</code></td><td>same host-absolute rule as <code>SCRAPKG_CONF</code></td></tr>
+      <tr><td><code>SCRAPKG_CACHE</code></td><td><code>/var/cache/scrapkg</code></td><td>downloaded packages, fetched sources, build scratch</td></tr>
+      <tr><td><code>SCRAPKG_YES</code></td><td>unset</td><td>skip confirmation prompts</td></tr>
+      <tr><td><code>SCRAPKG_FORCE</code></td><td>unset</td><td>override a dependency or <code>pkg.save[]</code> refusal</td></tr>
+      <tr><td><code>SCRAPKG_STYLE</code></td><td><code>scraplinux</code></td><td>output style - see <a href="/packages.html">packages</a></td></tr>
     </table>
-    <p><code>alpm-strap</code>'s whole reason for existing is that
-    <code>ALPM_CONF</code>/<code>ALPM_REPOD</code> stay host-absolute
-    under <code>ALPM_ROOT</code> by default - correct when a live Arctic
-    session with real config at <code>/etc/alpm</code> is installing;
+    <p><code>scrapkg-strap</code>'s whole reason for existing is that
+    <code>SCRAPKG_CONF</code>/<code>SCRAPKG_REPOD</code> stay host-absolute
+    under <code>SCRAPKG_ROOT</code> by default - correct when a live ScrapLinux
+    session with real config at <code>/etc/scrapkg</code> is installing;
     wrong when the host is some other live Linux with no
-    <code>/etc/alpm</code> at all, which is why it passes both
+    <code>/etc/scrapkg</code> at all, which is why it passes both
     explicitly.</p>
   </section>
 
   <section>
     <h2>Quick reference</h2>
     <table>
-      <tr><td><code>/etc/arctic/*.conf</code></td><td>the six declarative files - see <a href="/configure.html">configuration</a></td></tr>
-      <tr><td><code>/etc/arctic/conf.lib</code></td><td>the shared reader/writer for them</td></tr>
-      <tr><td><code>alpm</code></td><td>packages: install, remove, build from source, snapshot, roll back</td></tr>
-      <tr><td><code>arctic-rebuild</code></td><td>make the system match the declared config</td></tr>
-      <tr><td><code>arctic rollback</code></td><td>go back to an earlier generation</td></tr>
-      <tr><td><code>arctic-shell</code></td><td>a throwaway environment with packages in it</td></tr>
-      <tr><td><code>arctic-chroot</code></td><td>enter an installed system with the kernel filesystems bound</td></tr>
-      <tr><td><code>/etc/alpm/keys</code></td><td>the public keys a repository index has to be signed with</td></tr>
-      <tr><td><code>/run/arctic/boot.log</code></td><td>what actually happened during the last boot</td></tr>
+      <tr><td><code>/etc/scraplinux/*.conf</code></td><td>the six declarative files - see <a href="/configure.html">configuration</a></td></tr>
+      <tr><td><code>/etc/scraplinux/conf.lib</code></td><td>the shared reader/writer for them</td></tr>
+      <tr><td><code>scrapkg</code></td><td>packages: install, remove, build from source, snapshot, roll back</td></tr>
+      <tr><td><code>scraplinux-rebuild</code></td><td>make the system match the declared config</td></tr>
+      <tr><td><code>scraplinux rollback</code></td><td>go back to an earlier generation</td></tr>
+      <tr><td><code>scraplinux-shell</code></td><td>a throwaway environment with packages in it</td></tr>
+      <tr><td><code>scraplinux-chroot</code></td><td>enter an installed system with the kernel filesystems bound</td></tr>
+      <tr><td><code>/etc/scrapkg/keys</code></td><td>the public keys a repository index has to be signed with</td></tr>
+      <tr><td><code>/run/scraplinux/boot.log</code></td><td>what actually happened during the last boot</td></tr>
     </table>
   </section>
 
   <section class="docnav">
-    More: <a href="/">arctic linux docs</a> ·
+    More: <a href="/">scraplinux linux docs</a> ·
     <a href="/install.html">install</a> ·
     <a href="/configure.html">configuration</a> ·
     <a href="/packages.html">packages</a> ·
@@ -131,7 +132,7 @@ grep netdev /etc/group</pre>
   </section>
 
   <footer>
-    <p>Arctic Linux - <a href="https://github.com/apiwo/arctic-linux">source on GitHub</a></p>
+    <p>ScrapLinux - <a href="https://github.com/apiwo/scraplinux">source on GitHub</a></p>
   </footer>
 </div>
 </body>
