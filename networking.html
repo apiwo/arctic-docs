@@ -43,13 +43,13 @@ wifi-connect scan [iface]           scan and show what is in range</pre>
     domain <code>00</code>, where most 5 GHz channels are receive-only -
     an access point shows up in a scan and the card is then forbidden to
     transmit to it, which reads exactly like a wrong passphrase.
-    <code>scrapkg add wireless-regdb</code> fixes it; <code>WIFI_COUNTRY=US
+    <code>scraps add wireless-regdb</code> fixes it; <code>WIFI_COUNTRY=US
     wifi-connect</code> sets a country code for one run.</p>
   </section>
 
   <section>
     <h2>Desktops</h2>
-    <pre class="code">scrapkg add scraplinux-xfce     # or scraplinux-kde, niri-dms, apiwow-dwm</pre>
+    <pre class="code">scraps add scraplinux-xfce     # or scraplinux-kde, niri-dms, apiwow-dwm</pre>
     <table>
       <tr><td><code>scraplinux-xfce</code></td><td>XFCE 4.20, foot, Thunar, LightDM, X11, PipeWire, fonts</td></tr>
       <tr><td><code>scraplinux-kde</code></td><td>Plasma 6, foot, Dolphin, SDDM, PipeWire, fonts</td></tr>
@@ -66,8 +66,8 @@ startx</pre>
 
   <section>
     <h2>Audio</h2>
-    <pre class="code">scrapkg add sound-setup            # busybox init
-scrapkg add sound-setup-openrc     # OpenRC</pre>
+    <pre class="code">scraps add sound-setup            # busybox init
+scraps add sound-setup-openrc     # OpenRC</pre>
     <p>PipeWire and WirePlumber as the audio layer, the PipeWire
     PulseAudio compatibility shim, ALSA, and <code>alsamixer</code>.
     Unlike the bare <code>scraplinux-sound</code> meta-package (dependencies
@@ -81,7 +81,7 @@ scrapkg add sound-setup-openrc     # OpenRC</pre>
     <table>
       <tr><td><code>busybox</code></td><td>the default, bundled in the def tarball. <code>/etc/rc.boot</code>, <code>/etc/rc.d</code> scripts.</td></tr>
       <tr><td><code>openrc</code></td><td>bundled in the openrc tarball, with <code>openrc-init</code> wired up as PID 1. Dependency-based, from Gentoo - <code>/etc/init.d</code>, <code>rc-update</code>.</td></tr>
-      <tr><td><code>sysvinit</code></td><td>installed afterward via <code>scrapkg add</code>. <code>/etc/inittab</code>, <code>/etc/rc3.d</code>.</td></tr>
+      <tr><td><code>sysvinit</code></td><td>installed afterward via <code>scraps add</code>. <code>/etc/inittab</code>, <code>/etc/rc3.d</code>.</td></tr>
       <tr><td><code>runit</code></td><td>installed afterward. <code>/etc/sv</code>, <code>sv up</code>/<code>sv down</code>.</td></tr>
       <tr><td><code>dinit</code></td><td>installed afterward. <code>dinitctl</code>.</td></tr>
       <tr><td><code>initialization</code></td><td><a href="https://github.com/apiwo/initialization">ScrapLinux's own fork of nitro</a>, installed afterward.</td></tr>

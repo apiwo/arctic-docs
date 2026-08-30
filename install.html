@@ -58,28 +58,28 @@ mount --mkdir /dev/sdX1 /mnt/boot</pre>
     <p>Two flavors: <code>def</code> (busybox init, the tested default)
     and <code>openrc</code> (OpenRC already wired up as init instead).
     Both bundle glibc, toybox, busybox, zsh, doas, e2fsprogs, and
-    <code>scrapkg</code> itself, pre-installed and ready to sync. Neither
+    <code>scraps</code> itself, pre-installed and ready to sync. Neither
     bundles <code>scraplinux-base</code>, a kernel, or a bootloader - those
-    come from <code>scrapkg add</code> once repo indexes are synced.</p>
+    come from <code>scraps add</code> once repo indexes are synced.</p>
   </section>
 
   <section>
-    <h2>Bootstrapping scrapkg</h2>
-    <pre class="code">/mnt/usr/bin/scrapkg-strap /mnt</pre>
-    <p><code>scrapkg-strap</code>'s only job is syncing fresh repository
+    <h2>Bootstrapping scraps</h2>
+    <pre class="code">/mnt/usr/bin/scraps-strap /mnt</pre>
+    <p><code>scraps-strap</code>'s only job is syncing fresh repository
     indexes into the extracted tree. It passes
-    <code>SCRAPKG_CONF</code>/<code>SCRAPKG_REPOD</code> explicitly rather than
+    <code>SCRAPS_CONF</code>/<code>SCRAPS_REPOD</code> explicitly rather than
     relying on their defaults, because those default to host-absolute
     paths - correct when a live ScrapLinux session with real
-    <code>/etc/scrapkg</code> config is doing the installing, wrong here,
+    <code>/etc/scraps</code> config is doing the installing, wrong here,
     since whatever booted this could be any live Linux with no
-    <code>/etc/scrapkg</code> at all.</p>
+    <code>/etc/scraps</code> at all.</p>
   </section>
 
   <section>
     <h2>fstab, before chroot</h2>
-    <pre class="code">SCRAPKG_ROOT=/mnt SCRAPKG_CONF=/mnt/etc/scrapkg/scrapkg.conf SCRAPKG_REPOD=/mnt/etc/scrapkg/repos.d \
-  /mnt/usr/bin/scrapkg add genfstab
+    <pre class="code">SCRAPS_ROOT=/mnt SCRAPS_CONF=/mnt/etc/scraps/scraps.conf SCRAPS_REPOD=/mnt/etc/scraps/repos.d \
+  /mnt/usr/bin/scraps add genfstab
 /mnt/usr/bin/genfstab /mnt >> /mnt/etc/fstab</pre>
     <p><code>genfstab</code> reads <code>/proc/mounts</code> from the
     live environment's own view - it has to run before chroot, not after,
@@ -99,14 +99,14 @@ mount --mkdir /dev/sdX1 /mnt/boot</pre>
     with the terminal on what backspace even sends).</p>
     <pre class="code">passwd
 adduser you
-scrapkg add scraplinux-base
-scrapkg add scraplinux-base-kernel
-scrapkg add limine
+scraps add scraplinux-base
+scraps add scraplinux-base-kernel
+scraps add limine
 scraplinux-mkinitramfs
 scraplinux-rebuild</pre>
     <p>Swap <code>limine</code> for <code>grub</code> on a BIOS install
     if you'd rather have GRUB. Swap <code>scraplinux-base-kernel</code> for
-    any other flavor - <code>scrapkg search kernel</code> lists them, see
+    any other flavor - <code>scraps search kernel</code> lists them, see
     <a href="/kernels.html">kernels</a>. <code>scraplinux-mkinitramfs</code>
     only needs to run explicitly here because you're doing it from inside
     a chroot rather than through a normal package upgrade, which triggers

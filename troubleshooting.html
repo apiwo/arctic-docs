@@ -87,23 +87,23 @@ grep netdev /etc/group</pre>
   </section>
 
   <section>
-    <h2>scrapkg environment variables</h2>
+    <h2>scraps environment variables</h2>
     <table>
       <tr><th>Variable</th><th>Default</th><th>What it does</th></tr>
-      <tr><td><code>SCRAPKG_ROOT</code></td><td><code>/</code></td><td>work on another root instead of / (an extracted tarball, a chroot)</td></tr>
-      <tr><td><code>SCRAPKG_CONF</code></td><td><code>/etc/scrapkg/scrapkg.conf</code></td><td>always host-absolute, even under <code>SCRAPKG_ROOT</code> - a target's own copy is for its future use, not read during a cross-root install</td></tr>
-      <tr><td><code>SCRAPKG_REPOD</code></td><td><code>/etc/scrapkg/repos.d</code></td><td>same host-absolute rule as <code>SCRAPKG_CONF</code></td></tr>
-      <tr><td><code>SCRAPKG_CACHE</code></td><td><code>/var/cache/scrapkg</code></td><td>downloaded packages, fetched sources, build scratch</td></tr>
-      <tr><td><code>SCRAPKG_YES</code></td><td>unset</td><td>skip confirmation prompts</td></tr>
-      <tr><td><code>SCRAPKG_FORCE</code></td><td>unset</td><td>override a dependency or <code>pkg.save[]</code> refusal</td></tr>
-      <tr><td><code>SCRAPKG_STYLE</code></td><td><code>scraplinux</code></td><td>output style - see <a href="/packages.html">packages</a></td></tr>
+      <tr><td><code>SCRAPS_ROOT</code></td><td><code>/</code></td><td>work on another root instead of / (an extracted tarball, a chroot)</td></tr>
+      <tr><td><code>SCRAPS_CONF</code></td><td><code>/etc/scraps/scraps.conf</code></td><td>always host-absolute, even under <code>SCRAPS_ROOT</code> - a target's own copy is for its future use, not read during a cross-root install</td></tr>
+      <tr><td><code>SCRAPS_REPOD</code></td><td><code>/etc/scraps/repos.d</code></td><td>same host-absolute rule as <code>SCRAPS_CONF</code></td></tr>
+      <tr><td><code>SCRAPS_CACHE</code></td><td><code>/var/cache/scraps</code></td><td>downloaded packages, fetched sources, build scratch</td></tr>
+      <tr><td><code>SCRAPS_YES</code></td><td>unset</td><td>skip confirmation prompts</td></tr>
+      <tr><td><code>SCRAPS_FORCE</code></td><td>unset</td><td>override a dependency or <code>pkg.save[]</code> refusal</td></tr>
+      <tr><td><code>SCRAPS_STYLE</code></td><td><code>scraplinux</code></td><td>output style - see <a href="/packages.html">packages</a></td></tr>
     </table>
-    <p><code>scrapkg-strap</code>'s whole reason for existing is that
-    <code>SCRAPKG_CONF</code>/<code>SCRAPKG_REPOD</code> stay host-absolute
-    under <code>SCRAPKG_ROOT</code> by default - correct when a live ScrapLinux
-    session with real config at <code>/etc/scrapkg</code> is installing;
+    <p><code>scraps-strap</code>'s whole reason for existing is that
+    <code>SCRAPS_CONF</code>/<code>SCRAPS_REPOD</code> stay host-absolute
+    under <code>SCRAPS_ROOT</code> by default - correct when a live ScrapLinux
+    session with real config at <code>/etc/scraps</code> is installing;
     wrong when the host is some other live Linux with no
-    <code>/etc/scrapkg</code> at all, which is why it passes both
+    <code>/etc/scraps</code> at all, which is why it passes both
     explicitly.</p>
   </section>
 
@@ -112,12 +112,12 @@ grep netdev /etc/group</pre>
     <table>
       <tr><td><code>/etc/scraplinux/*.conf</code></td><td>the six declarative files - see <a href="/configure.html">configuration</a></td></tr>
       <tr><td><code>/etc/scraplinux/conf.lib</code></td><td>the shared reader/writer for them</td></tr>
-      <tr><td><code>scrapkg</code></td><td>packages: install, remove, build from source, snapshot, roll back</td></tr>
+      <tr><td><code>scraps</code></td><td>packages: install, remove, build from source, snapshot, roll back</td></tr>
       <tr><td><code>scraplinux-rebuild</code></td><td>make the system match the declared config</td></tr>
       <tr><td><code>scraplinux rollback</code></td><td>go back to an earlier generation</td></tr>
       <tr><td><code>scraplinux-shell</code></td><td>a throwaway environment with packages in it</td></tr>
       <tr><td><code>scraplinux-chroot</code></td><td>enter an installed system with the kernel filesystems bound</td></tr>
-      <tr><td><code>/etc/scrapkg/keys</code></td><td>the public keys a repository index has to be signed with</td></tr>
+      <tr><td><code>/etc/scraps/keys</code></td><td>the public keys a repository index has to be signed with</td></tr>
       <tr><td><code>/run/scraplinux/boot.log</code></td><td>what actually happened during the last boot</td></tr>
     </table>
   </section>

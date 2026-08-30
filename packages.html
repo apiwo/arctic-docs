@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Packages (scrapkg) - ScrapLinux docs</title>
+<title>Packages (scraps) - ScrapLinux docs</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -17,36 +17,36 @@
   <a href="https://codeberg.org/apiwo/scraplinux">codeberg</a>
 </nav>
 <div class="wrap">
-  <header class="hero"><h1>Packages (scrapkg)</h1></header>
+  <header class="hero"><h1>Packages (scraps)</h1></header>
 
   <section>
-    <h2>scrapkg</h2>
+    <h2>scraps</h2>
     <p>ScrapLinux's package manager, written specifically for this
-    distribution. Binary packages are <code>.scrapkgz</code> files - a plain
+    distribution. Binary packages are <code>.scrapsz</code> files - a plain
     tar.xz archive holding a <code>.PKGINFO</code> metadata block, a
     <code>.FILES</code> manifest, and the payload rooted at
     <code>/</code>.</p>
-    <pre class="code">scrapkg add vim              install
-scrapkg rem vim              remove
-scrapkg rem -d vim         remove, and anything only it needed as a dependency
-scrapkg search editor        search names and descriptions
-scrapkg info vim             what a package is, its version, its dependencies
-scrapkg list                 everything currently installed
-scrapkg files vim            every file a package owns
-scrapkg owns /usr/bin/vim    which installed package owns a given file
-scrapkg fetch all            refresh the repository indexes over the network
-scrapkg upgrade              upgrade everything installed to the latest available
-scrapkg system get           the installed release, kernel and generation
-scrapkg system check         everything system upgrade would do - nothing applied
-scrapkg system upgrade       sync, upgrade packages and the kernel, apply pending
+    <pre class="code">scraps add vim              install
+scraps rem vim              remove
+scraps rem -d vim         remove, and anything only it needed as a dependency
+scraps search editor        search names and descriptions
+scraps info vim             what a package is, its version, its dependencies
+scraps list                 everything currently installed
+scraps files vim            every file a package owns
+scraps owns /usr/bin/vim    which installed package owns a given file
+scraps fetch all            refresh the repository indexes over the network
+scraps upgrade              upgrade everything installed to the latest available
+scraps system get           the installed release, kernel and generation
+scraps system check         everything system upgrade would do - nothing applied
+scraps system upgrade       sync, upgrade packages and the kernel, apply pending
                           fixes, reconcile the declarative config files</pre>
     <p>Every <code>add</code>/<code>rem</code> updates
     <code>pkgs.conf</code>'s mirror automatically - see
     <a href="/configure.html">configuration</a>. There's no separate
-    declarative package list to keep in sync; plain <code>scrapkg add</code>
+    declarative package list to keep in sync; plain <code>scraps add</code>
     is the normal, correct way to manage packages.</p>
 
-    <h3>scrapkg system get / check / upgrade</h3>
+    <h3>scraps system get / check / upgrade</h3>
     <p>Some corrections don't move a package version: a default that
     turned out to be harmful, a service file that was wrong, a script
     that failed on some machines. An upgrade can't carry those, since
@@ -54,13 +54,13 @@ scrapkg system upgrade       sync, upgrade packages and the kernel, apply pendin
     is where they live - an ordinary binary repository, so applying a
     fix is still an install and the system stays binary, with one extra
     file naming which correction rides in which package.</p>
-    <pre class="code">scrapkg system check bootloader    only what might explain a machine that will not boot
-scrapkg system upgrade kernel
-scrapkg system upgrade major       only the most serious fixes
-scrapkg system upgrade bugfix      both fix levels, and none of the plain changes</pre>
+    <pre class="code">scraps system check bootloader    only what might explain a machine that will not boot
+scraps system upgrade kernel
+scraps system upgrade major       only the most serious fixes
+scraps system upgrade bugfix      both fix levels, and none of the plain changes</pre>
     <p>Every pending fix is listed before anything installs, and applied
     fixes are remembered, so one is offered once and never again.
-    <code>scrapkg system upgrade</code> runs <code>scraplinux-rebuild</code>
+    <code>scraps system upgrade</code> runs <code>scraplinux-rebuild</code>
     itself at the end, so a package upgrade and a config change converge
     through one command.</p>
   </section>
@@ -68,27 +68,27 @@ scrapkg system upgrade bugfix      both fix levels, and none of the plain change
   <section>
     <h2>Building from source</h2>
     <p>Not every package has a binary built for it. When one doesn't,
-    scrapkg offers to build it on the spot.</p>
-    <pre class="code">scrapkg add -s some-package    build from the port, even when a binary also exists
-scrapkg build recipe           build a specific recipe file into an .scrapkgz directly</pre>
+    scraps offers to build it on the spot.</p>
+    <pre class="code">scraps add -s some-package    build from the port, even when a binary also exists
+scraps build recipe           build a specific recipe file into an .scrapsz directly</pre>
     <p>Recipes come from the ports tree, a separate host from the binary
-    mirror, reached through <code>SCRAPKG_PORTS</code> - never one of the
-    repositories in <code>/etc/scrapkg/repos.d</code>.</p>
+    mirror, reached through <code>SCRAPS_PORTS</code> - never one of the
+    repositories in <code>/etc/scraps/repos.d</code>.</p>
   </section>
 
   <section>
     <h2>Undoing a transaction</h2>
-    <pre class="code">scrapkg rollback              undo the most recent transaction
-scrapkg rollback 20260815-111525    undo a specific one
-scrapkg log                   what has been done, and which transactions are on disk</pre>
-    <p>On a btrfs root scrapkg also takes a filesystem snapshot before every
+    <pre class="code">scraps rollback              undo the most recent transaction
+scraps rollback 20260815-111525    undo a specific one
+scraps log                   what has been done, and which transactions are on disk</pre>
+    <p>On a btrfs root scraps also takes a filesystem snapshot before every
     transaction, catching anything a package's install script did on its
     own - separate from file-level rollback.</p>
   </section>
 
   <section>
     <h2>Reporting style</h2>
-    <p><code>SCRAPKG_STYLE</code> in <code>/etc/scrapkg/scrapkg.conf</code>
+    <p><code>SCRAPS_STYLE</code> in <code>/etc/scraps/scraps.conf</code>
     chooses the wording and layout. The resolver, downloads and progress
     are identical in all three.</p>
     <table>
@@ -110,7 +110,7 @@ scrapkg log                   what has been done, and which transactions are on 
       <tr><td><code>big</code></td><td>packages past the mirror's file size limit: firmware, the toolchain</td></tr>
       <tr><td><code>nonfree</code>, <code>alt-nonfree</code>, <code>multilib</code></td><td>off by default; opt in explicitly</td></tr>
     </table>
-    <p>Configured per repository in <code>/etc/scrapkg/repos.d/*.repo</code>:</p>
+    <p>Configured per repository in <code>/etc/scraps/repos.d/*.repo</code>:</p>
     <pre class="code">name = main
 url = https://raw.githubusercontent.com/apiwo/scraplinux-pkgs/main/ALL/main
 enabled = yes
@@ -127,7 +127,7 @@ sig = optional</pre>
     <p>Every index is signed with <a href="https://man.openbsd.org/signify">signify</a>
     - Ed25519, one line of public key, no GPG anywhere near the base
     system. The public key arrives with <code>scraplinux-base</code>, in
-    <code>/etc/scrapkg/keys</code>, before the first fetch.</p>
+    <code>/etc/scraps/keys</code>, before the first fetch.</p>
     <pre class="code">sig = required   an index without a good signature is not used
 sig = optional   checked when it can be, said out loud when it cannot (default)
 sig = off        not checked at all</pre>

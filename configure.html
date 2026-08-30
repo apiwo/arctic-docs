@@ -54,18 +54,18 @@ value
     a reader can check for, so a write interrupted partway through is
     detectable rather than silently read as an empty, valid file.
     <code>conf.lib</code> (sourced by <code>wifi-connect</code>,
-    <code>scrapkg</code>, and <code>scraplinux-rebuild</code>) provides
+    <code>scraps</code>, and <code>scraplinux-rebuild</code>) provides
     <code>conf_get</code>/<code>conf_get1</code>/<code>conf_set</code>/<code>conf_set1</code>
     - the only supported way to read or write one of these files.</p>
   </section>
 
   <section>
     <h2>pkgs.conf is a mirror, not a wishlist</h2>
-    <p><code>pkgs.scraplinux[]</code> is rewritten by <code>scrapkg</code> itself
+    <p><code>pkgs.scraplinux[]</code> is rewritten by <code>scraps</code> itself
     after every <code>add</code>/<code>rem</code> to match exactly what's
     explicitly installed right now. Nothing ever reconciles the machine
     <em>to</em> this file - editing it by hand changes nothing, the next
-    <code>scrapkg add</code>/<code>rem</code> just overwrites the edit with
+    <code>scraps add</code>/<code>rem</code> just overwrites the edit with
     reality again.</p>
     <p>This is deliberate, and the reason is a real incident: an earlier
     design used a declared package list that a rebuild diffed against and
@@ -77,8 +77,8 @@ value
     careful.</p>
     <p><code>pkg.save[]</code> is the opposite - a hand-maintained
     protect-list. Anything named there refuses removal outright
-    (<code>scrapkg rem</code> included, and any orphan sweep), regardless of
-    why it was installed, unless overridden with <code>SCRAPKG_FORCE=1</code>.</p>
+    (<code>scraps rem</code> included, and any orphan sweep), regardless of
+    why it was installed, unless overridden with <code>SCRAPS_FORCE=1</code>.</p>
   </section>
 
   <section>
