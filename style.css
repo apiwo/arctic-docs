@@ -54,17 +54,40 @@ header.hero .tagline{
   margin-top:6px;
 }
 
+/* Docs-specific: a top accent rule and a card-style guide list, so this
+   reads as its own section of the site rather than a recolored copy of
+   the home page. */
+body{border-top:4px solid var(--accent);}
+
 .top-grid{
   display:flex;
   gap:32px;
   padding:20px 0 8px;
   flex-wrap:wrap;
 }
-.pages{min-width:150px;font-size:14px;}
-.pages p{margin:0 0 8px;color:var(--fg-dim);}
-.pages ul{list-style:none;margin:0;padding:0;}
-.pages li{margin:4px 0;}
-.pages li::before{content:"> ";color:var(--accent-dim);}
+.pages{min-width:220px;font-size:14px;}
+.pages p{
+  margin:0 0 10px;
+  color:var(--accent);
+  font-weight:700;
+  text-transform:uppercase;
+  font-size:12px;
+  letter-spacing:.08em;
+}
+.pages ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.pages li{margin:0;}
+.pages li a{
+  display:block;
+  padding:8px 12px;
+  border:1px solid var(--rule);
+  border-left:3px solid var(--accent-dim);
+  background:var(--bg-alt);
+  text-decoration:none;
+  color:var(--fg);
+  transition:border-left-color .12s ease;
+}
+.pages li a:hover{border-left-color:var(--accent);color:var(--accent);}
+.pages li::before{content:none;}
 
 .art{
   flex:1;
