@@ -110,6 +110,17 @@ scraplinux-rebuild</pre>
     only needs to run explicitly here because you're doing it from inside
     a chroot rather than through a normal package upgrade, which triggers
     it as a hook automatically afterward.</p>
+    <p>The <code>passwd</code>/<code>adduser</code> pair above is the
+    imperative way to set the root password and create your own user.
+    There's a declarative alternative that does the same thing:
+    write your account into <code>/etc/scraplinux/users.conf</code>
+    (<code>users.declared[</code> / <code>you:/bin/zsh:wheel</code> /
+    <code>]</code>) and the wifi network into
+    <code>/etc/scraplinux/network.conf</code> before running
+    <code>scraplinux-rebuild</code> below - it creates the account and
+    (via <code>rc.d/wifi</code> at boot) brings up the network from those
+    files, no interactive step needed. Either path works; pick whichever
+    fits how you're installing - by hand at a console, or scripted.</p>
     <p><code>scraplinux-rebuild</code> has to run here, inside the chroot,
     not after exiting it - it reads plain <code>/etc/fstab</code>,
     <code>/etc/crypttab</code> and <code>/boot</code>, which only mean
@@ -124,17 +135,56 @@ scraplinux-rebuild</pre>
   </section>
 
   <section>
-    <h2>Deploying the bootloader</h2>
-    <p>Back on the live environment, as root:</p>
-    <pre class="code"><span class="c"># BIOS, Limine</span>
-limine bios-install /dev/sdX
+    <h2>Networking</h2>
+    <p>Still inside the chroot, before or after the account step above:</p>
+    <pre class="code">scraps add wifi-connect-default
+wifi-connect</pre>
+    <p><code>wifi-connect-default</code> is the core tool plus the common
+    wireless drivers (<code>iwlwifi</code> for Intel) and a working
+    resolver - not just association, actual name resolution afterward.
+    If your hardware needs a less common driver (Broadcom's <code>wl</code>
+    and similar), add <code>wifi-connect-extra</code> too. The interactive
+    picker itself is <code>wifi-connect-cli</code>, pulled in by
+    <code>wifi-connect-default</code> automatically.</p>
+    <p>After a successful connection, <code>wifi-connect</code> asks
+    <em>"Add networking to init?"</em> - saying yes writes the SSID/PSK to
+    <code>/etc/scraplinux/network.conf</code> and enables the
+    <code>wifi</code> service, so it reconnects automatically on every
+    future boot. That reconnect is deliberately the <em>last</em> thing
+    that happens at boot, after a display manager if one is running - a
+    boot that waited on an association or a DHCP lease before showing a
+    login prompt made every single boot slower for it, whether or not
+    anyone at the console cared about the network yet. Skip
+    <code>wifi-connect</code> entirely and write
+    <code>/etc/scraplinux/network.conf</code> directly if you'd rather
+    configure it without the prompt - see the declarative note above.</p>
+  </section>
 
-<span class="c"># EFI, Limine - the target's own copy, not the live environment's</span>
+  <section>
+    <h2>Deploying the bootloader</h2>
+    <p>Back on the live environment, as root - <code>scraps system boot</code>
+    does this in one step, fstab included:</p>
+    <pre class="code"><span class="c"># UEFI, Limine</span>
+SCRAPS_ROOT=/mnt scraps system boot limine-efi /dev/nvme0n1p5
+
+<span class="c"># BIOS, GRUB</span>
+SCRAPS_ROOT=/mnt scraps system boot grub-bios /dev/nvme0n1p5</pre>
+    <p>Point it at the boot partition either way - Limine needs the ESP
+    itself (files go on it directly, plus an NVRAM entry via
+    <code>efibootmgr</code>); GRUB BIOS installs to the disk's MBR, not a
+    partition, so it derives the whole disk
+    (<code>/dev/nvme0n1p5</code> → <code>/dev/nvme0n1</code>,
+    <code>/dev/sda5</code> → <code>/dev/sda</code>) from whatever partition
+    you give it. Both regenerate <code>/etc/fstab</code> from
+    <code>genfstab</code> first, so a filesystem that changed since the
+    earlier fstab step is never boot-configured against a stale one.</p>
+    <p>Doing it by hand instead - what the command above actually runs:</p>
+    <pre class="code"><span class="c"># EFI, Limine - the target's own copy, not the live environment's</span>
 mkdir -p /mnt/boot/EFI/BOOT /mnt/boot/EFI/scraplinux
 cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/BOOT/
 cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/scraplinux/scraplinuxx64.efi
 efibootmgr --create --disk /dev/sdX --part 1 \
-  --loader '\EFI\scraplinux\scraplinuxx64.efi' --label 'ScrapLinux linux'
+  --loader '\EFI\scraplinux\scraplinuxx64.efi' --label 'ScrapLinux'
 
 <span class="c"># BIOS, GRUB</span>
 grub-install --target=i386-pc --boot-directory=/mnt/boot /dev/sdX</pre>
