@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual setup: drivers, X11 &amp; Wayland - ScrapLinux docs</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <a href="https://scraplinux.apiwow.net">main</a>
+  <a href="https://scraplinux-docs.apiwow.net">docs</a>
+  <a href="https://pkg-scraplinux.apiwow.net">packages</a>
+  <a href="https://ports-scraplinux.apiwow.net">ports</a>
+  <a href="https://scraplinux-releases.apiwow.net">releases</a>
+  <a href="https://github.com/apiwo/scraplinux">github</a>
+</nav>
+<div class="wrap">
+  <header class="hero">
+    <h1>Manual setup</h1>
+    <span class="tagline">drivers, networking, X11 and Wayland, by hand</span>
+  </header>
+
+  <section>
+    <h2>Read this first</h2>
+    <p>A base install boots to a console and nothing else. There is no
+    display manager, no desktop, no driver auto-installer and no daemon
+    quietly fixing things behind you. Everything below is a step you take
+    deliberately, in order.</p>
+    <p>The order matters more than any single command here. A device whose
+    driver was never loaded does not exist as far as the rest of the system
+    is concerned - it has no interface name, no <code>/dev</code> node, and
+    every tool that looks for it correctly reports that it is not there.
+    Most "my wifi does not work" and "X will not start" reports are really
+    "the driver never loaded", one layer further down than where the error
+    appeared.</p>
+  </section>
+
+  <section>
+    <h2>1. Firmware and drivers</h2>
+    <p>Do this before touching networking or graphics.</p>
+    <p>Most wireless cards, and every modern GPU, need a firmware blob the
+    kernel loads into the device at probe time. The kernel module alone is
+    not enough: without the blob the driver loads, fails to bring the
+    hardware up, and logs the failure to <code>dmesg</code> where nothing
+    else looks.</p>
+    <pre class="code">scraps add linux-firmware        # ~390 MB installed - Intel/Atheros/Realtek wifi, AMD/Intel GPU
+scraps add wireless-regdb        # regulatory database, see "regulatory domain" below</pre>
+
+    <h3>Device manager and coldplug</h3>
+    <p><code>eudev</code> is the device manager. Its daemon,
+    <code>udevd</code>, reacts to <em>new</em> uevents - a device plugged in
+    while the system is running. Hardware that was already present at boot
+    announced itself before any daemon was listening, so those events have
+    to be replayed once at startup. That replay is the coldplug pass, and it
+    is what actually loads drivers for the hardware already in the machine.</p>
+    <pre class="code">scraps add eudev
+
+# both services want to be enabled: the daemon, and the coldplug pass
+: > /etc/scraplinux/services/udevd
+: > /etc/scraplinux/services/udev-trigger
+
+# regenerate the service files for whichever init is running
+scraplinux-init-setup s66        # or: busybox, openrc, runit, dinit, nitro</pre>
+    <p>Verify all three of these before moving on. If <code>udevadm</code>
+    does not run, nothing below it can work:</p>
+    <pre class="code">udevadm --version                # must print a version
+lsmod | grep -i iwlwifi          # your driver, loaded
+ip link                          # your interface, present</pre>
+    <p>If <code>ip link</code> shows only <code>lo</code>, no driver is
+    loaded. Load one by hand and read why it did or did not take:</p>
+    <pre class="code">doas modprobe iwlwifi            # or ath9k, rtw88, mt76 - whatever the card is
+dmesg | tail -40                 # firmware loaded? rejected? missing?
+lspci -nnk | grep -iA3 network   # what the card actually is, and which driver claims it</pre>
+    <p>A module that inserts cleanly but still produces no interface is
+    almost always a missing firmware blob - <code>dmesg</code> names the
+    file it wanted.</p>
+  </section>
+
+  <section>
+    <h2>2. Networking</h2>
+    <p>Nothing here works until <code>ip link</code> shows the interface.
+    If it does not, go back to the previous section.</p>
+
+    <h3>Wired</h3>
+    <pre class="code">ip link set eth0 up
+udhcpc -i eth0                   # busybox DHCP client</pre>
+    <p><code>rc.d/network</code> does exactly this on every boot, picking
+    the first non-loopback, non-wireless interface it finds.</p>
+
+    <h3>Wireless, the short way</h3>
+    <pre class="code">wifi-connect                     # scan, pick a network, enter the passphrase
+wifi-connect &lt;ssid&gt; &lt;psk&gt;        # no prompts
+wifi-connect scan</pre>
+    <p>On success it writes the SSID, passphrase and interface to
+    <code>/etc/scraplinux/network.conf</code>, and <code>rc.d/wifi</code>
+    reconnects from that file on every subsequent boot.</p>
+
+    <h3>Wireless, by hand</h3>
+    <p>The same thing <code>wifi-connect</code> does, one step at a time:</p>
+    <pre class="code">iw dev                           # confirm the wireless interface exists
+ip link set wlan0 up
+
+wpa_passphrase '&lt;ssid&gt;' '&lt;psk&gt;' > /etc/wpa_supplicant.conf
+wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant.conf
+udhcpc -i wlan0</pre>
+
+    <h3>Regulatory domain</h3>
+    <p>With no regulatory database the kernel stays in world domain
+    <code>00</code>, where most 5 GHz channels are receive-only. The access
+    point appears in a scan and the card is then forbidden to transmit to
+    it - which looks exactly like a wrong passphrase.</p>
+    <pre class="code">scraps add wireless-regdb
+WIFI_COUNTRY=US wifi-connect      # set a country code for one run</pre>
+  </section>
+
+  <section>
+    <h2>3. Seat access</h2>
+    <p>Both X11 and Wayland need permission to open the GPU and the input
+    devices. On systemd distributions logind hands that out; here it is
+    <code>seatd</code> (small, recommended) or <code>elogind</code> (the
+    logind fork, if something you run expects its D-Bus interface).</p>
+    <pre class="code">scraps add seatd
+: > /etc/scraplinux/services/seatd
+scraplinux-init-setup s66
+
+# your user needs to be in these groups
+doas usermod -aG seat,video,input &lt;user&gt;</pre>
+    <p>Log out and back in afterwards - group membership is read at login,
+    so a shell you were already sitting in will not have it.</p>
+  </section>
+
+  <section>
+    <h2>4. X11</h2>
+    <pre class="code">scraps add xorg-server xorg-xinit xf86-input-libinput mesa libglvnd
+scraps add ttf-dejavu             # X with no fonts starts and looks broken</pre>
+    <p><code>xf86-input-libinput</code> is not optional. Without it the X
+    server starts, draws, and has no keyboard or mouse driver at all - a
+    running session you cannot type into, which reads as a freeze.</p>
+    <p>Pick a window manager and tell <code>startx</code> to run it. The
+    last line of <code>.xinitrc</code> is the session: when it exits, X
+    exits.</p>
+    <pre class="code">scraps add dwm dmenu st           # or: openbox, icewm, xfwm4
+
+printf '#!/bin/sh\nexec dwm\n' > ~/.xinitrc
+chmod +x ~/.xinitrc
+startx</pre>
+    <p>If X dies immediately, the reason is in the log, not on the
+    console:</p>
+    <pre class="code">grep -E '\(EE\)|\(WW\)' /var/log/Xorg.0.log</pre>
+  </section>
+
+  <section>
+    <h2>5. Wayland</h2>
+    <p>A Wayland compositor is the display server and the window manager at
+    once, so there is no <code>startx</code> equivalent - you run the
+    compositor directly.</p>
+    <pre class="code">scraps add wayland
+scraps add dwl                    # or: labwc, niri, sway, swayfx, hyprland, i3wl
+scraps add foot fuzzel waybar mako    # terminal, launcher, bar, notifications</pre>
+
+    <h3>XDG_RUNTIME_DIR</h3>
+    <p>Wayland requires <code>XDG_RUNTIME_DIR</code> - it is where the
+    compositor puts its socket. On systemd distributions logind creates it
+    at login. Here, if you are not running elogind, nothing does, and every
+    compositor exits immediately with a message about the runtime
+    directory. Set it before launching:</p>
+    <pre class="code">export XDG_RUNTIME_DIR=/run/user/$(id -u)
+mkdir -p "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR"</pre>
+    <p>Put those three lines in your shell profile rather than retyping
+    them. Then start the compositor:</p>
+    <pre class="code">dwl                                       # bare
+dbus-run-session dwl                      # with a session bus
+dbus-run-session dwl -s ~/.config/dwl/autostart.sh   # and a startup script</pre>
+    <p>Wrap it in <code>dbus-run-session</code> if you want a notification
+    daemon, a system tray, or anything else that talks over the session bus
+    - without one, <code>mako</code> and tray applets start and then find
+    nothing to talk to.</p>
+    <p><code>i3wl</code> is a prebuilt option here: a dwl fork with
+    i3-style tiling, a tray and a status bar, shipped with its own
+    launcher.</p>
+    <pre class="code">scraps add i3wl
+i3wl                              # wraps dbus-run-session itself</pre>
+  </section>
+
+  <section>
+    <h2>Checklist</h2>
+    <p>In order. Each step is only worth attempting once the one above it
+    is true.</p>
+    <table>
+      <tr><td><code>udevadm --version</code></td><td>device manager works at all</td></tr>
+      <tr><td><code>lsmod</code></td><td>the driver for your hardware is loaded</td></tr>
+      <tr><td><code>ip link</code></td><td>the network interface exists</td></tr>
+      <tr><td><code>ping -c1 1.1.1.1</code></td><td>routing and DHCP work</td></tr>
+      <tr><td><code>ls /dev/dri</code></td><td>the GPU node exists</td></tr>
+      <tr><td><code>echo $XDG_RUNTIME_DIR</code></td><td>set, for Wayland</td></tr>
+    </table>
+  </section>
+
+  <section class="docnav">
+    More: <a href="/">scraplinux linux docs</a> ·
+    <a href="/install.html">install</a> ·
+    <a href="/configure.html">configuration</a> ·
+    <a href="/packages.html">packages</a> ·
+    <a href="/kernels.html">kernels &amp; generations</a> ·
+    <a href="/networking.html">networking, desktops &amp; init</a> ·
+    <a href="/troubleshooting.html">troubleshooting &amp; reference</a>
+  </section>
+
+  <footer>
+    <p>ScrapLinux - <a href="https://github.com/apiwo/scraplinux">source on GitHub</a></p>
+    <p>ScrapLinux's own code is <a href="https://github.com/apiwo/scraplinux/blob/main/LICENSE">GPLv3</a>. Packaged software keeps its own license.</p>
+  </footer>
+</div>
+</body>
+</html>

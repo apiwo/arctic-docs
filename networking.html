@@ -23,6 +23,12 @@
     <p>One stack, live and installed alike: wpa_supplicant and udhcpc,
     driven by <code>wifi-connect</code>. No NetworkManager anywhere in
     the base system.</p>
+    <p>None of this can work before the card's driver and firmware are
+    loaded and the interface actually exists. If <code>wifi-connect</code>
+    reports <em>no wireless interface found</em>, that is the problem it is
+    describing - start at
+    <a href="/manual.html">manual setup</a>, which covers firmware,
+    coldplug and how to confirm the interface is really there.</p>
     <pre class="code">wifi-connect                        pick an interface and a network
 wifi-connect &lt;ssid&gt; &lt;psk&gt; [iface]   connect without being asked anything
 wifi-connect scan [iface]           scan and show what is in range</pre>
@@ -31,9 +37,13 @@ wifi-connect scan [iface]           scan and show what is in range</pre>
     connect it writes the SSID/PSK/interface to
     <code>/etc/scraplinux/network.conf</code> - see
     <a href="/configure.html">configuration</a>. <code>rc.d/wifi</code>
-    reads that back on every boot and reconnects, started in the
-    background by <code>rc.boot</code> and never waited on - an
-    association or a DHCP lease never holds up the login prompt.</p>
+    reads that back on every boot and reconnects, and is never waited on -
+    an association or a DHCP lease never holds up the login prompt. How it
+    gets started depends on the init: <code>rc.boot</code> launches it in
+    the background under busybox init, while s6/66 and OpenRC each run it
+    as a service of their own, enabled by a marker file in
+    <code>/etc/scraplinux/services/</code> and wired up by
+    <code>scraplinux-init-setup</code>.</p>
     <p>Wired DHCP comes up on its own via <code>rc.d/network</code>, same
     non-blocking treatment. A soft-blocked radio (a BIOS default on many
     laptops) is unblocked automatically before scanning; a hard block (a
@@ -116,6 +126,7 @@ scraplinux-init-setup runit --root /mnt   or write them into a target root</pre>
     <a href="/configure.html">configuration</a> ·
     <a href="/packages.html">packages</a> ·
     <a href="/kernels.html">kernels &amp; generations</a> ·
+    <a href="/manual.html">manual setup</a> ·
     <a href="/troubleshooting.html">troubleshooting &amp; reference</a>
   </section>
 
