@@ -185,6 +185,37 @@ i3wl                              # wraps dbus-run-session itself</pre>
   </section>
 
   <section>
+    <h2>6. NVIDIA</h2>
+    <p>Applies to both X11 and Wayland. The proprietary driver is in
+    <code>nonfree</code>; if you would rather not run a blob, install
+    <code>nouveau-drivers</code> from <code>alt-nonfree</code> instead - on
+    Turing and newer the open GSP path is genuinely usable.</p>
+    <pre class="code">scraps add nvidia-drivers</pre>
+    <p>This one configures itself, which is the exception rather than the
+    rule here. On install it asks whether to let scraps set the driver up;
+    answer no and nothing is written, answer yes and it blacklists
+    <code>nouveau</code> so the two do not fight over the card, enables
+    kernel modesetting, preserves video memory across suspend, loads the
+    three modules at boot and rebuilds the initramfs. To make that decision
+    again later, run <code>scraps-nvidia-configure</code>.</p>
+    <p>Kernel modesetting is not optional on Wayland. Without
+    <code>nvidia_drm modeset=1</code> every wlroots compositor comes up to a
+    black screen, and Xorg is the only thing that still works - which reads
+    as "Wayland is broken" rather than as a missing module option.</p>
+    <p>Reboot afterwards. The modules are loaded at boot rather than swapped
+    in underneath a running display server, so nothing changes until you
+    do.</p>
+    <pre class="code">nvidia-smi                        # after the reboot: the card, driver and memory
+modinfo -F version nvidia         # the driver the running kernel actually loaded</pre>
+    <p>The kernel module is built against one specific kernel. Installing a
+    different kernel flavour, or upgrading to one built from a different
+    configuration, means the module no longer matches and will not load;
+    <code>scraps</code> rebuilds it on upgrade, and
+    <code>ScrapLinux-base-kernel-devel</code> is what makes that possible -
+    it ships the kernel build tree that any out-of-tree module needs.</p>
+  </section>
+
+  <section>
     <h2>Checklist</h2>
     <p>In order. Each step is only worth attempting once the one above it
     is true.</p>
